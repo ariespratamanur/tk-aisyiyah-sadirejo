@@ -11,7 +11,6 @@ export default function PortalTU() {
   const [newPassword, setNewPassword] = useState("");
   const [activeTab, setActiveTab] = useState<"ppdb" | "rapor" | "laporan" | "tabungan" | "tagihan" | "wa">("ppdb");
 
-  // Simulasi data pendaftar PPDB riil (kosong secara default jika belum ada yang daftar)
   const [daftarPPDB] = useState<any[]>([]);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -38,9 +37,16 @@ export default function PortalTU() {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
         <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md border border-slate-200">
-          <div className="bg-orange-600 text-white p-4 rounded-xl text-center mb-6">
-            <h1 className="font-bold text-lg">Login Portal Tata Usaha (TU)</h1>
-            <p className="text-xs text-orange-100 mt-1">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</p>
+          <div className="bg-orange-600 text-white p-4 rounded-xl text-center mb-6 space-y-2">
+            <img
+              src="https://upload.wikimedia.org/wikipedia/commons/2/23/Logo_Muhammadiyah.svg"
+              alt="Logo Muhammadiyah"
+              className="w-12 h-12 mx-auto object-contain bg-white/10 p-1 rounded-full"
+            />
+            <div>
+              <h1 className="font-bold text-lg">Login Portal Tata Usaha (TU)</h1>
+              <p className="text-xs text-orange-100 mt-0.5">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</p>
+            </div>
           </div>
 
           {!showChangePassword ? (
@@ -138,11 +144,18 @@ export default function PortalTU() {
   return (
     <div className="min-h-screen bg-slate-100 p-4">
       <div className="max-w-4xl mx-auto space-y-4">
-        {/* Header Portal TU */}
+        {/* Header Portal TU dengan Logo */}
         <div className="bg-orange-600 text-white p-4 rounded-2xl shadow-sm flex justify-between items-center">
-          <div>
-            <h1 className="font-bold text-base">Portal Tata Usaha (TU)</h1>
-            <p className="text-xs text-orange-100">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</p>
+          <div className="flex items-center gap-3">
+            <img
+              src="https://upload.wikimedia.org/wikipedia/commons/2/23/Logo_Muhammadiyah.svg"
+              alt="Logo Muhammadiyah"
+              className="w-10 h-10 object-contain bg-white/10 p-1 rounded-full"
+            />
+            <div>
+              <h1 className="font-bold text-base">Portal Tata Usaha (TU)</h1>
+              <p className="text-xs text-orange-100">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</p>
+            </div>
           </div>
           <div className="flex gap-2">
             <button
@@ -189,7 +202,7 @@ export default function PortalTU() {
           </div>
         )}
 
-        {/* Navigation Tabs */}
+        {/* Navigasi Tab */}
         <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between gap-1">
           <button
             onClick={() => setActiveTab("ppdb")}

@@ -11,7 +11,6 @@ export default function PortalGuru() {
   const [newPassword, setNewPassword] = useState("");
   const [activeTab, setActiveTab] = useState<"jurnal" | "tabungan" | "rapor">("jurnal");
 
-  // State Fitur Tabungan
   const [jenisTransaksi, setJenisTransaksi] = useState<"setor" | "tarik">("setor");
   const [nominal, setNominal] = useState("");
   const [keterangan, setKeterangan] = useState("");
@@ -36,14 +35,20 @@ export default function PortalGuru() {
     }
   };
 
-  // Tampilan Form Login & Ubah Password
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
         <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md border border-slate-200">
-          <div className="bg-emerald-800 text-white p-4 rounded-xl text-center mb-6">
-            <h1 className="font-bold text-lg">Login Portal Guru</h1>
-            <p className="text-xs text-emerald-100 mt-1">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</p>
+          <div className="bg-emerald-800 text-white p-4 rounded-xl text-center mb-6 space-y-2">
+            <img
+              src="https://upload.wikimedia.org/wikipedia/commons/2/23/Logo_Muhammadiyah.svg"
+              alt="Logo Muhammadiyah"
+              className="w-12 h-12 mx-auto object-contain bg-white/10 p-1 rounded-full"
+            />
+            <div>
+              <h1 className="font-bold text-lg">Login Portal Guru</h1>
+              <p className="text-xs text-emerald-100 mt-0.5">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</p>
+            </div>
           </div>
 
           {!showChangePassword ? (
@@ -138,15 +143,21 @@ export default function PortalGuru() {
     );
   }
 
-  // Tampilan Utama Portal Guru Setelah Login
   return (
     <div className="min-h-screen bg-slate-100 p-4">
       <div className="max-w-3xl mx-auto space-y-4">
-        {/* Header Portal Guru */}
+        {/* Header Portal Guru dengan Logo */}
         <div className="bg-emerald-800 text-white p-4 rounded-2xl shadow-sm flex justify-between items-center">
-          <div>
-            <h1 className="font-bold text-base">Portal Guru Kelas</h1>
-            <p className="text-xs text-emerald-100">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</p>
+          <div className="flex items-center gap-3">
+            <img
+              src="https://upload.wikimedia.org/wikipedia/commons/2/23/Logo_Muhammadiyah.svg"
+              alt="Logo Muhammadiyah"
+              className="w-10 h-10 object-contain bg-white/10 p-1 rounded-full"
+            />
+            <div>
+              <h1 className="font-bold text-base">Portal Guru Kelas</h1>
+              <p className="text-xs text-emerald-100">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</p>
+            </div>
           </div>
           <div className="flex gap-2">
             <button
@@ -164,7 +175,7 @@ export default function PortalGuru() {
           </div>
         </div>
 
-        {/* Modal Pop-up Ubah Password (jika diklik dari dalam Dashboard) */}
+        {/* Modal Ubah Password */}
         {showChangePassword && (
           <div className="bg-white p-4 rounded-2xl shadow-md border border-slate-200">
             <h2 className="text-sm font-bold text-slate-800 mb-3">Ubah Password Akun Guru</h2>
@@ -193,7 +204,7 @@ export default function PortalGuru() {
           </div>
         )}
 
-        {/* Filter Siswa & Tab Navigasi */}
+        {/* Filter Siswa & Navigasi */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
@@ -238,7 +249,7 @@ export default function PortalGuru() {
           </div>
         </div>
 
-        {/* Tab 1: Jurnal */}
+        {/* Tab Jurnal */}
         {activeTab === "jurnal" && (
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Input Aktivitas Harian Siswa</h2>
@@ -267,11 +278,10 @@ export default function PortalGuru() {
           </div>
         )}
 
-        {/* Tab 2: Tabungan */}
+        {/* Tab Tabungan */}
         {activeTab === "tabungan" && (
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-4">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Pencatatan Tabungan Siswa</h2>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1">Jenis Transaksi</label>
@@ -319,18 +329,10 @@ export default function PortalGuru() {
             >
               Simpan Transaksi Tabungan
             </button>
-
-            {/* Riwayat Mutasi Singkat */}
-            <div className="pt-3 border-t border-slate-100">
-              <h3 className="text-xs font-bold text-slate-700 mb-2">Riwayat Tabungan Siswa</h3>
-              <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-200 text-center">
-                Belum ada transaksi tabungan yang tercatat.
-              </div>
-            </div>
           </div>
         )}
 
-        {/* Tab 3: e-Rapor PAUD */}
+        {/* Tab e-Rapor PAUD */}
         {activeTab === "rapor" && (
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Upload e-Rapor PAUD (File PDF)</h2>
