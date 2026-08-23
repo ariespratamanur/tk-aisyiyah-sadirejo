@@ -34,7 +34,7 @@ export default function PortalWali() {
   const [jenisBiaya, setJenisBiaya] = useState("SPP Bulanan");
   const [nominalBiaya, setNominalBiaya] = useState("150000");
   const [metodeSPP, setMetodeSPP] = useState<"qris" | "transfer">("qris");
-  const [sudahBayarSPP, setSudahBayarSPP] = useState(false);
+  const [statusBayarSPP, setStatusBayarSPP] = useState<"idle" | "pending" | "verified">("idle");
 
   // Infaq Lazismu State
   const [jenisInfaq, setJenisInfaq] = useState("Infaq Sukarela");
@@ -125,44 +125,25 @@ export default function PortalWali() {
     setActiveTab("kartu");
   };
 
+  // Kpntrol Konfirmasi Bayar Wali (Menunggu Verifikasi TU)
   const handleConfirmPembayaran = () => {
-    setSudahBayarSPP(true);
-
     const totalMasuk = Number(nominalBiaya) + 2000;
-    const newLaporan = {
+    const newPendingBayar = {
+      id: Date.now(),
       jenis: jenisBiaya,
       nominal: totalMasuk,
       tanggal: new Date().toLocaleDateString("id-ID"),
       wali: namaWaliInput,
       namaAnak: dataSiswa?.namaAnak || "Calon Siswa",
+      status: "pending", // Status Menunggu Verifikasi TU
     };
 
-    const existingLaporan = JSON.parse(localStorage.getItem("tu_daftar_pembayaran") || "[]");
-    existingLaporan.unshift(newLaporan);
-    localStorage.setItem("tu_daftar_pembayaran", JSON.stringify(existingLaporan));
+    const existingPending = JSON.parse(localStorage.getItem("tu_daftar_pembayaran") || "[]");
+    existingPending.unshift(newPendingBayar);
+    localStorage.setItem("tu_daftar_pembayaran", JSON.stringify(existingPending));
 
-    const newKuitansi = {
-      id: Date.now(),
-      jenis: jenisBiaya,
-      nominal: totalMasuk,
-      tanggal: new Date().toLocaleDateString("id-ID"),
-      pesan: `Assalamu'alaikum Wr. Wb. Terima kasih Bunda/Ayah ${namaWaliInput} telah melakukan pembayaran ${jenisBiaya} sebesar Rp ${totalMasuk.toLocaleString("id-ID")}. Pembayaran telah resmi diterima oleh Tata Usaha TK 'Aisyiyah Bustanul Athfal Sadirejo. Jazakumullah Khairan Katsiran.`,
-    };
-
-    const existingKuitansi = JSON.parse(localStorage.getItem("integrated_kuitansi") || "[]");
-    existingKuitansi.unshift(newKuitansi);
-    localStorage.setItem("integrated_kuitansi", JSON.stringify(existingKuitansi));
-    setKuitansiList(existingKuitansi);
-
-    if (jenisBiaya === "Biaya Pendaftaran DP 50%" && dataSiswa) {
-      const updatedSiswa = { ...dataSiswa, status: "DITERIMA", persentaseBayar: 50 };
-      localStorage.setItem("ppdb_data_siswa", JSON.stringify(updatedSiswa));
-      setDataSiswa(updatedSiswa);
-    } else if (jenisBiaya === "Pelunasan Pendaftaran 100%" && dataSiswa) {
-      const updatedSiswa = { ...dataSiswa, status: "AKTIF", persentaseBayar: 100 };
-      localStorage.setItem("ppdb_data_siswa", JSON.stringify(updatedSiswa));
-      setDataSiswa(updatedSiswa);
-    }
+    setStatusBayarSPP("pending");
+    alert("Bukti pembayaran berhasil dikirim! Status saat ini: Menunggu Verifikasi Petugas TU.");
   };
 
   const hitungTotalSaldo = () => {
@@ -300,7 +281,7 @@ export default function PortalWali() {
           </div>
         )}
 
-        {/* Tab 2: Bayar Biaya & Kuitansi */}
+        {/* Tab 2: Bayar Biaya & Verifikasi Kuitansi */}
         {activeTab === "spp" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Pembayaran Biaya Sekolah & Kuitansi Digital</h2>
@@ -353,32 +334,43 @@ export default function PortalWali() {
                 </div>
               )}
 
-              {!sudahBayarSPP ? (
+              {/* Upload Bukti */}
+              <div className="space-y-2 pt-2 border-t">
+                <label className="block text-xs font-semibold text-slate-700">Upload Bukti Transaksi (Struk / Screenshot)</label>
+                <input type="file" accept="image/*" className="w-full text-xs p-2 border rounded-lg" />
+              </div>
+
+              {statusBayarSPP === "idle" && (
                 <button onClick={handleConfirmPembayaran} className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg text-xs">Konfirmasi & Kirim Pembayaran</button>
-              ) : (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 font-bold">
-                  ✓ Pembayaran Berhasil Dikirim! Kuitansi pembayaran resmi telah diterbitkan di bawah ini.
+              )}
+
+              {statusBayarSPP === "pending" && (
+                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-bold space-y-1">
+                  <p className="flex items-center gap-1">⏳ Status: Menunggu Verifikasi Petugas TU</p>
+                  <p className="text-[11px] font-normal text-amber-800">
+                    Bukti pembayaran Anda telah dikirim ke Portal TU. Kuitansi resmi akan otomatis terbit di bawah ini setelah diverifikasi oleh Petugas TU.
+                  </p>
                 </div>
               )}
             </div>
 
-            {/* Kolom Bukti Kuitansi Digital */}
+            {/* Kolom Bukti Kuitansi Digital (Terbit Setelah TU Verifikasi) */}
             <div className="pt-4 border-t space-y-3">
               <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1">🧾 Bukti Kuitansi Pembayaran Resmi:</h3>
               {kuitansiList.length === 0 ? (
-                <div className="text-xs text-slate-500 bg-slate-50 p-6 rounded-xl text-center border">Belum ada kuitansi pembayaran resmi.</div>
+                <div className="text-xs text-slate-500 bg-slate-50 p-6 rounded-xl text-center border">Belum ada kuitansi pembayaran yang diverifikasi.</div>
               ) : (
                 <div className="space-y-3">
                   {kuitansiList.map((k) => (
-                    <div key={k.id} className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-xl space-y-2 text-xs text-emerald-950">
+                    <div key={k.id} className="p-4 bg-emerald-50/80 border border-emerald-300 rounded-xl space-y-2 text-xs text-emerald-950 shadow-sm">
                       <div className="flex justify-between border-b border-emerald-200 pb-2">
-                        <span className="font-bold">KUITANSI RESMI SEKOLAH</span>
+                        <span className="font-bold text-emerald-900">KUITANSI RESMI SEKOLAH</span>
                         <span className="text-[10px] text-slate-500">{k.tanggal}</span>
                       </div>
-                      <p className="italic leading-relaxed">"{k.pesan}"</p>
+                      <p className="italic leading-relaxed text-slate-800">"{k.pesan}"</p>
                       <div className="pt-2 border-t border-emerald-200 flex justify-between font-bold text-emerald-900">
                         <span>Penyelesaian: {k.jenis}</span>
-                        <span>LUNAS</span>
+                        <span className="bg-emerald-700 text-white text-[10px] px-2 py-0.5 rounded-md">✓ LUNAS</span>
                       </div>
                     </div>
                   ))}
@@ -388,7 +380,7 @@ export default function PortalWali() {
           </div>
         )}
 
-        {/* Tab 3: Infaq Sukarela Lazismu (Lengkap Rekening & QRIS) */}
+        {/* Tab 3: Infaq Sukarela Lazismu */}
         {activeTab === "infaq" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -420,18 +412,16 @@ export default function PortalWali() {
                 </div>
               </div>
 
-              {/* TAMPILAN REKENING & QRIS LAZISMU LENGKAP */}
               {metodeInfaq === "qris" ? (
                 <div className="p-4 bg-orange-50/50 border border-orange-200 rounded-xl text-center space-y-2">
                   <p className="text-xs font-bold text-orange-900">QRIS NATIONAL RESMI LAZISMU</p>
-                  <div className="w-40 h-40 mx-auto bg-white p-2 border rounded-xl flex items-center justify-center shadow-sm">
+                  <div className="w-36 h-36 mx-auto bg-white p-2 border rounded-xl flex items-center justify-center shadow-sm">
                     <span className="text-xs text-slate-400 font-semibold">[ Barcode QRIS Lazismu ]</span>
                   </div>
-                  <p className="text-[10px] text-slate-500">Scan melalui BCA Mobile, BSI Mobile, GoPay, OVO, Dana, ShopeePay</p>
                 </div>
               ) : (
                 <div className="p-3 bg-orange-50/50 border border-orange-200 rounded-xl text-xs space-y-1">
-                  <p className="text-orange-950 font-bold mb-1">REKENING TUKAR PENYALURAN LAZISMU:</p>
+                  <p className="text-orange-950 font-bold mb-1">REKENING PENYALURAN LAZISMU:</p>
                   <p className="text-slate-700">Bank Tujuan: <strong>Bank Syariah Indonesia (BSI)</strong></p>
                   <p className="text-slate-700">No. Rekening: <strong className="text-emerald-700 text-sm">777-1234-567</strong></p>
                   <p className="text-slate-700">Atas Nama: <strong>LAZISMU KANTOR LAYANAN SADIREJO</strong></p>
