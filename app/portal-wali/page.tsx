@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { supabase } from "@/supabase";
 
 export default function PortalWali() {
+  const TENANT_ID = "aba-sadirejo";
+
   const [isWaliLoggedIn, setIsWaliLoggedIn] = useState(false);
   const [namaWaliInput, setNamaWaliInput] = useState("");
   const [noWaInput, setNoWaInput] = useState("");
@@ -53,28 +56,76 @@ export default function PortalWali() {
     }
   }, []);
 
-  const syncData = () => {
-    const savedStudent = localStorage.getItem("ppdb_data_siswa");
-    if (savedStudent) setDataSiswa(JSON.parse(savedStudent));
+  // Sync Real-Time Data dari Supabase Cloud
+  const syncDataFromSupabase = async () => {
+    if (!noWaInput) return;
 
-    const savedJurnal = localStorage.getItem("integrated_jurnal");
-    if (savedJurnal) setJurnalSiswa(JSON.parse(savedJurnal));
+    // 1. Fetch Data Siswa
+    const { data: siswaData } = await supabase
+      .from("siswa")
+      .select("*")
+      .eq("tenant_id", TENANT_ID)
+      .eq("wa_wali", noWaInput)
+      .maybeSingle();
 
-    const savedTabungan = localStorage.getItem("integrated_tabungan");
-    if (savedTabungan) setTabunganSiswa(JSON.parse(savedTabungan));
+    if (siswaData) {
+      setDataSiswa({
+        id: siswaData.id,
+        namaAnak: siswaData.nama_anak,
+        nikAnak: siswaData.nik_anak,
+        kelasTarget: siswaData.kelas_target,
+        status: siswaData.status,
+        tahunAjaran: siswaData.tahun_ajaran,
+      });
 
-    const savedRapor = localStorage.getItem("integrated_rapor");
-    if (savedRapor) setRaporUrl(savedRapor);
+      // 2. Fetch Jurnal
+      const { data: jurnalData } = await supabase
+        .from("jurnal")
+        .select("*")
+        .eq("tenant_id", TENANT_ID)
+        .eq("nama_anak", siswaData.nama_anak)
+        .order("tanggal", { ascending: false });
 
-    const savedKuitansi = localStorage.getItem("integrated_kuitansi");
-    if (savedKuitansi) setKuitansiList(JSON.parse(savedKuitansi));
+      if (jurnalData) setJurnalSiswa(jurnalData);
+
+      // 3. Fetch Tabungan
+      const { data: tabunganData } = await supabase
+        .from("tabungan")
+        .select("*")
+        .eq("tenant_id", TENANT_ID)
+        .eq("nama_anak", siswaData.nama_anak)
+        .order("tanggal", { ascending: false });
+
+      if (tabunganData) setTabunganSiswa(tabunganData);
+
+      // 4. Fetch Kuitansi Pembayaran Verified
+      const { data: bayarData } = await supabase
+        .from("pembayaran")
+        .select("*")
+        .eq("tenant_id", TENANT_ID)
+        .eq("nama_anak", siswaData.nama_anak)
+        .eq("status", "verified")
+        .order("created_at", { ascending: false });
+
+      if (bayarData) {
+        setKuitansiList(
+          bayarData.map((k: any) => ({
+            id: k.id,
+            jenis: k.jenis,
+            nominal: k.nominal,
+            tanggal: new Date(k.created_at).toLocaleDateString("id-ID"),
+            pesan: `Assalamu'alaikum Wr. Wb. Terima kasih Bunda/Ayah ${k.wali} telah melakukan pembayaran ${k.jenis} sebesar Rp ${Number(k.nominal).toLocaleString("id-ID")}. Pembayaran telah resmi diterima oleh Tata Usaha. Jazakumullah Khairan Katsiran.`,
+          }))
+        );
+      }
+    }
   };
 
   useEffect(() => {
-    syncData();
-    const interval = setInterval(syncData, 1000);
+    syncDataFromSupabase();
+    const interval = setInterval(syncDataFromSupabase, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isWaliLoggedIn, noWaInput]);
 
   const handleWaliLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,62 +153,59 @@ export default function PortalWali() {
     }
   };
 
-  const handlePPDBSubmit = (e: React.FormEvent) => {
+  // Submit PPDB ke Supabase
+  const handlePPDBSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const taAktif = localStorage.getItem("selected_ta") || "2026/2027";
-    const newStudent = {
-      id: Date.now(),
-      namaAnak,
-      nikAnak,
-      kelasTarget,
-      tempatLahir,
-      tanggalLahir,
-      alamat,
-      namaAyah,
-      pekerjaanAyah,
-      namaIbu,
-      pekerjaanIbu,
-      namaWali: namaWaliInput,
-      waWali: noWaInput,
-      status: "TERDAFTAR (Menunggu Pembayaran / Verifikasi TU)",
-      persentaseBayar: 0,
-      tanggalDaftar: new Date().toLocaleDateString("id-ID"),
-      tahunAjaran: taAktif,
-    };
 
-    localStorage.setItem("ppdb_data_siswa", JSON.stringify(newStudent));
-    const existingTU = JSON.parse(localStorage.getItem("tu_daftar_ppdb") || "[]");
-    existingTU.unshift(newStudent);
-    localStorage.setItem("tu_daftar_ppdb", JSON.stringify(existingTU));
+    const { data, error } = await supabase.from("siswa").insert([
+      {
+        tenant_id: TENANT_ID,
+        nama_anak: namaAnak,
+        nik_anak: nikAnak,
+        kelas_target: kelasTarget,
+        tahun_ajaran: taAktif,
+        nama_wali: namaWaliInput,
+        wa_wali: noWaInput,
+        status: "TERDAFTAR (Menunggu Pembayaran / Verifikasi TU)",
+      },
+    ]);
 
-    setDataSiswa(newStudent);
-    alert("Formulir PPDB berhasil dikirim ke Portal TU!");
-    setActiveTab("kartu");
+    if (!error) {
+      alert("Formulir PPDB berhasil dikirim dan tersimpan di Supabase Cloud!");
+      setActiveTab("kartu");
+      syncDataFromSupabase();
+    } else {
+      alert("Gagal mengirim data PPDB: " + error.message);
+    }
   };
 
-  const handleConfirmPembayaran = () => {
+  // Confirm Pembayaran ke Supabase
+  const handleConfirmPembayaran = async () => {
     if (!buktiFile) return alert("Harap unggah foto bukti pembayaran terlebih dahulu!");
 
     const taAktif = localStorage.getItem("selected_ta") || "2026/2027";
     const totalMasuk = Number(nominalBiaya) + 2000;
-    const newPendingBayar = {
-      id: Date.now(),
-      jenis: jenisBiaya,
-      nominal: totalMasuk,
-      tanggal: new Date().toLocaleDateString("id-ID"),
-      wali: namaWaliInput,
-      namaAnak: dataSiswa?.namaAnak || "Calon Siswa",
-      buktiUrl: buktiFile,
-      status: "pending",
-      tahunAjaran: taAktif,
-    };
 
-    const existingPending = JSON.parse(localStorage.getItem("tu_daftar_pembayaran") || "[]");
-    existingPending.unshift(newPendingBayar);
-    localStorage.setItem("tu_daftar_pembayaran", JSON.stringify(existingPending));
+    const { error } = await supabase.from("pembayaran").insert([
+      {
+        tenant_id: TENANT_ID,
+        nama_anak: dataSiswa?.namaAnak || "Calon Siswa",
+        wali: namaWaliInput,
+        jenis: jenisBiaya,
+        nominal: totalMasuk,
+        bukti_url: buktiFile,
+        status: "pending",
+        tahun_ajaran: taAktif,
+      },
+    ]);
 
-    setStatusBayarSPP("pending");
-    alert("Bukti pembayaran berhasil dikirim ke Portal TU untuk diverifikasi!");
+    if (!error) {
+      setStatusBayarSPP("pending");
+      alert("Bukti pembayaran berhasil terkirim ke Supabase Cloud & Portal TU!");
+    } else {
+      alert("Gagal mengirim bukti pembayaran: " + error.message);
+    }
   };
 
   const hitungTotalSaldo = () => {
@@ -207,7 +255,7 @@ export default function PortalWali() {
           <button onClick={handleWaliLogout} className="bg-emerald-900 hover:bg-emerald-950 px-3 py-1.5 rounded-lg text-xs font-semibold">Keluar</button>
         </div>
 
-        {/* Tab Navigasi Termasuk Fitur Belajar Online */}
+        {/* Tab Navigasi */}
         <div className="bg-white p-2 rounded-2xl shadow-sm border flex flex-wrap gap-1">
           <button onClick={() => setActiveTab("kartu")} className={`flex-1 min-w-[80px] py-2 text-xs font-semibold rounded-xl ${activeTab === "kartu" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}>🪪 Kartu</button>
           <button onClick={() => setActiveTab("belajar")} className={`flex-1 min-w-[80px] py-2 text-xs font-semibold rounded-xl ${activeTab === "belajar" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}>📖 Belajar</button>
@@ -255,39 +303,21 @@ export default function PortalWali() {
                     </div>
                   </div>
                 </div>
-
-                <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs space-y-2 text-amber-950">
-                  <p className="font-bold">📌 Aturan Skema Pembayaran Biaya Pendaftaran:</p>
-                  <ul className="list-disc list-inside space-y-1 text-[11px] text-amber-900">
-                    <li>Dapat dicicil 2 kali (DP 50% & Pelunasan 50%).</li>
-                    <li><strong>DP 50%:</strong> Maksimal 5 hari kerja dari form pendaftaran diterima (Status: DITERIMA).</li>
-                    <li><strong>Pelunasan (50% Sisanya):</strong> Wajib dilunasi maksimal 1 minggu sebelum anak masuk sekolah (Status: AKTIF).</li>
-                  </ul>
-                </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Tab 2: Fitur Belajar Online (COMING SOON) */}
+        {/* Tab 2: Belajar Online */}
         {activeTab === "belajar" && (
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4 text-center">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center mx-auto text-3xl font-bold">
-              🚀
-            </div>
+            <div className="w-16 h-16 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center mx-auto text-3xl font-bold">🚀</div>
             <div className="space-y-1">
-              <span className="bg-amber-100 text-amber-800 font-bold text-[10px] px-3 py-1 rounded-full uppercase tracking-wider">
-                Pengembangan Modul
-              </span>
+              <span className="bg-amber-100 text-amber-800 font-bold text-[10px] px-3 py-1 rounded-full uppercase tracking-wider">Pengembangan Modul</span>
               <h2 className="text-lg font-bold text-slate-800 pt-2">Fitur Belajar Online (E-Learning)</h2>
-              <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                Materi pembelajaran interaktif, video, dan tugas harian dari <strong>Tim PT</strong> sedang disiapkan dan akan segera diunggah di modul ini.
-              </p>
+              <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">Materi pembelajaran interaktif, video, dan tugas harian dari <strong>Tim PT</strong> sedang disiapkan dan akan segera diunggah di modul ini.</p>
             </div>
-
-            <div className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-xs text-slate-400 font-semibold">
-              ✨ STATUS: COMING SOON / SEGERA HADIR ✨
-            </div>
+            <div className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-xs text-slate-400 font-semibold">✨ STATUS: COMING SOON / SEGERA HADIR ✨</div>
           </div>
         )}
 
@@ -295,21 +325,13 @@ export default function PortalWali() {
         {activeTab === "spp" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Pembayaran Biaya Sekolah & Upload Bukti Bayar</h2>
-
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Jenis Biaya</label>
-                <select value={jenisBiaya} onChange={(e) => {
-                  setJenisBiaya(e.target.value);
-                  if (e.target.value === "SPP Bulanan") setNominalBiaya("150000");
-                  else if (e.target.value === "Biaya Pendaftaran DP 50%") setNominalBiaya("150000");
-                  else if (e.target.value === "Pelunasan Pendaftaran 100%") setNominalBiaya("150000");
-                  else setNominalBiaya("100000");
-                }} className="w-full px-3 py-2 border rounded-lg text-xs">
-                  <option value="SPP Bulanan">SPP Bulanan (Agustus 2026)</option>
+                <select value={jenisBiaya} onChange={(e) => setJenisBiaya(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs">
+                  <option value="SPP Bulanan">SPP Bulanan</option>
                   <option value="Biaya Pendaftaran DP 50%">Biaya Pendaftaran (DP 50%)</option>
                   <option value="Pelunasan Pendaftaran 100%">Biaya Pendaftaran (Pelunasan 100%)</option>
-                  <option value="Biaya Kegiatan Sekolah">Biaya Kegiatan Sekolah / Seragam</option>
                 </select>
               </div>
 
@@ -318,130 +340,22 @@ export default function PortalWali() {
                 <input type="text" value={nominalBiaya} onChange={(e) => setNominalBiaya(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs font-bold" />
               </div>
 
-              <div className="bg-slate-50 p-3 rounded-xl border text-xs space-y-1">
-                <div className="flex justify-between"><span>Nominal Biaya</span><span>Rp {Number(nominalBiaya || 0).toLocaleString("id-ID")}</span></div>
-                <div className="flex justify-between"><span>Biaya Layanan Admin</span><span>Rp 2.000</span></div>
-                <div className="flex justify-between font-bold text-emerald-800 border-t pt-1"><span>Total Transfer</span><span>Rp {(Number(nominalBiaya || 0) + 2000).toLocaleString("id-ID")}</span></div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setMetodeSPP("qris")} className={`py-2 text-xs font-semibold rounded-lg border ${metodeSPP === "qris" ? "bg-emerald-50 border-emerald-600 text-emerald-800" : "border-slate-200"}`}>📱 Scan QRIS Sekolah</button>
-                <button type="button" onClick={() => setMetodeSPP("transfer")} className={`py-2 text-xs font-semibold rounded-lg border ${metodeSPP === "transfer" ? "bg-emerald-50 border-emerald-600 text-emerald-800" : "border-slate-200"}`}>🏦 Transfer Bank BSI</button>
-              </div>
-
-              {metodeSPP === "qris" ? (
-                <div className="p-4 bg-slate-50 border rounded-xl text-center space-y-2">
-                  <p className="text-xs font-bold text-slate-700">QRIS RESMI SEKOLAH TK 'AISYIYAH SADIREJO</p>
-                  <div className="w-36 h-36 mx-auto bg-white p-2 border rounded-xl flex items-center justify-center">
-                    <span className="text-xs text-slate-400 font-semibold">[ Barcode QRIS Sekolah ]</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-3 bg-slate-50 border rounded-xl text-xs space-y-1">
-                  <p className="text-slate-600">Bank Tujuan: <strong>Bank Syariah Indonesia (BSI)</strong></p>
-                  <p className="text-slate-600">No. Rekening: <strong className="text-emerald-700">7123-4567-89</strong></p>
-                  <p className="text-slate-600">Atas Nama: <strong>TK AISYIYAH SADIREJO</strong></p>
-                </div>
-              )}
-
               <div className="space-y-2 pt-2 border-t">
                 <label className="block text-xs font-semibold text-slate-700">Upload Bukti Transaksi (Struk / Screenshot) *</label>
                 <input type="file" accept="image/*" onChange={handleFileUpload} className="w-full text-xs p-2 border rounded-lg" required />
-                {buktiFile && <p className="text-[10px] text-emerald-700 font-bold">✓ Foto bukti transaksi berhasil diunggah.</p>}
               </div>
 
-              {statusBayarSPP === "idle" && (
-                <button onClick={handleConfirmPembayaran} className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg text-xs">Konfirmasi & Kirim Pembayaran</button>
-              )}
-
-              {statusBayarSPP === "pending" && (
-                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-bold">
-                  ⏳ Status: Menunggu Verifikasi Petugas TU
-                </div>
-              )}
+              <button onClick={handleConfirmPembayaran} className="w-full bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-xs">Konfirmasi & Kirim Pembayaran</button>
             </div>
 
             <div className="pt-4 border-t space-y-3">
-              <h3 className="text-xs font-bold text-slate-800 flex items-center gap-1">🧾 Bukti Kuitansi Pembayaran Resmi:</h3>
-              {kuitansiList.length === 0 ? (
-                <div className="text-xs text-slate-500 bg-slate-50 p-6 rounded-xl text-center border">Belum ada kuitansi resmi yang diterbitkan.</div>
-              ) : (
-                <div className="space-y-3">
-                  {kuitansiList.map((k) => (
-                    <div key={k.id} className="p-4 bg-emerald-50/80 border border-emerald-300 rounded-xl space-y-2 text-xs text-emerald-950 shadow-sm">
-                      <div className="flex justify-between border-b border-emerald-200 pb-2">
-                        <span className="font-bold text-emerald-900">KUITANSI RESMI SEKOLAH</span>
-                        <span className="text-[10px] text-slate-500">{k.tanggal}</span>
-                      </div>
-                      <p className="italic leading-relaxed text-slate-800">"{k.pesan}"</p>
-                      <div className="pt-2 border-t border-emerald-200 flex justify-between font-bold text-emerald-900">
-                        <span>Penyelesaian: {k.jenis}</span>
-                        <span className="bg-emerald-700 text-white text-[10px] px-2 py-0.5 rounded-md">✓ LUNAS</span>
-                      </div>
-                    </div>
-                  ))}
+              <h3 className="text-xs font-bold text-slate-800">🧾 Bukti Kuitansi Pembayaran Resmi:</h3>
+              {kuitansiList.map((k) => (
+                <div key={k.id} className="p-4 bg-emerald-50 border border-emerald-300 rounded-xl space-y-2 text-xs">
+                  <p className="font-bold text-emerald-900">{k.jenis} - Rp {Number(k.nominal).toLocaleString("id-ID")}</p>
+                  <p className="italic text-slate-700">{k.pesan}</p>
                 </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Tab 4: Infaq Lazismu */}
-        {activeTab === "infaq" && (
-          <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
-            <div className="flex justify-between items-center border-b pb-2">
-              <h2 className="text-sm font-bold text-slate-800">Infaq & ZIS Sukarela (Lazismu)</h2>
-              <span className="bg-orange-100 text-orange-800 font-bold text-[10px] px-2.5 py-0.5 rounded-full">🧡 Kemitraan Lazismu</span>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Jenis Penyaluran</label>
-                <select value={jenisInfaq} onChange={(e) => setJenisInfaq(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs">
-                  <option value="Infaq Sukarela">Infaq Sukarela</option>
-                  <option value="Sadaqah">Sadaqah</option>
-                  <option value="Zakat Fitri">Zakat Fitri</option>
-                  <option value="Zakat Maal">Zakat Maal (2.5% Harta)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Nominal Infaq / ZIS (Rp)</label>
-                <input type="number" placeholder="Contoh: 50000" value={nominalInfaq} onChange={(e) => setNominalInfaq(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs font-bold" />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Metode Penyaluran</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setMetodeInfaq("qris")} className={`py-2 text-xs font-semibold rounded-lg border ${metodeInfaq === "qris" ? "bg-orange-50 border-orange-500 text-orange-800" : "border-slate-200"}`}>📱 Scan QRIS Lazismu</button>
-                  <button type="button" onClick={() => setMetodeInfaq("transfer")} className={`py-2 text-xs font-semibold rounded-lg border ${metodeInfaq === "transfer" ? "bg-orange-50 border-orange-500 text-orange-800" : "border-slate-200"}`}>🏦 Transfer Rekening Lazismu</button>
-                </div>
-              </div>
-
-              {metodeInfaq === "qris" ? (
-                <div className="p-4 bg-orange-50/50 border border-orange-200 rounded-xl text-center space-y-2">
-                  <p className="text-xs font-bold text-orange-900">QRIS NATIONAL RESMI LAZISMU</p>
-                  <div className="w-36 h-36 mx-auto bg-white p-2 border rounded-xl flex items-center justify-center shadow-sm">
-                    <span className="text-xs text-slate-400 font-semibold">[ Barcode QRIS Lazismu ]</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-3 bg-orange-50/50 border border-orange-200 rounded-xl text-xs space-y-1">
-                  <p className="text-orange-950 font-bold mb-1">REKENING PENYALURAN LAZISMU:</p>
-                  <p className="text-slate-700">Bank Tujuan: <strong>Bank Syariah Indonesia (BSI)</strong></p>
-                  <p className="text-slate-700">No. Rekening: <strong className="text-emerald-700 text-sm">777-1234-567</strong></p>
-                  <p className="text-slate-700">Atas Nama: <strong>LAZISMU KANTOR LAYANAN SADIREJO</strong></p>
-                </div>
-              )}
-
-              {!sudahBayarInfaq ? (
-                <button onClick={() => setSudahBayarInfaq(true)} className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg text-xs">Tunaikan Infaq ke Lazismu</button>
-              ) : (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 space-y-1">
-                  <p className="font-bold">Assalamu'alaikum Wr. Wb.</p>
-                  <p>Terima kasih Bunda/Ayah sudah berinfaq hari ini, semoga kebaikan kita di terima Allah Subhanahu wa ta'ala, jazakallah khairan.</p>
-                </div>
-              )}
+              ))}
             </div>
           </div>
         )}
@@ -450,55 +364,28 @@ export default function PortalWali() {
         {activeTab === "jurnal" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Jurnal Harian Perkembangan Siswa (Input Guru)</h2>
-            {jurnalSiswa.length === 0 ? (
-              <div className="text-xs text-slate-500 bg-slate-50 p-6 rounded-xl text-center">Belum ada jurnal harian yang diinput oleh Guru Kelas.</div>
-            ) : (
-              <div className="space-y-3">
-                {jurnalSiswa.map((j, idx) => (
-                  <div key={idx} className="p-4 border rounded-xl bg-slate-50 space-y-2 text-xs">
-                    <p className="font-bold text-emerald-800">📅 Tanggal: {j.tanggal}</p>
-                    <ul className="list-disc list-inside text-slate-600 space-y-1">
-                      {j.aktivitas.map((act: string, i: number) => <li key={i}>{act}</li>)}
-                    </ul>
-                  </div>
-                ))}
+            {jurnalSiswa.map((j, idx) => (
+              <div key={idx} className="p-4 border rounded-xl bg-slate-50 space-y-2 text-xs">
+                <p className="font-bold text-emerald-800">📅 Tanggal: {j.tanggal}</p>
+                <ul className="list-disc list-inside text-slate-600 space-y-1">
+                  {Array.isArray(j.aktivitas) ? j.aktivitas.map((act: string, i: number) => <li key={i}>{act}</li>) : <li>{j.aktivitas}</li>}
+                </ul>
               </div>
-            )}
+            ))}
           </div>
         )}
 
         {/* Tab 6: Tabungan Siswa */}
         {activeTab === "tabungan" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
-            <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Buku Tabungan Digital Siswa (Input Guru)</h2>
+            <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Buku Tabungan Digital Siswa</h2>
             <div className="bg-emerald-800 text-white p-4 rounded-xl flex justify-between items-center">
               <div>
-                <p className="text-[10px] font-bold tracking-wider text-emerald-200 uppercase">TOTAL SALDO TABUNGAN AKTIF</p>
-                <p className="text-2xl font-bold mt-0.5">Rp {hitungTotalSaldo().toLocaleString("id-ID")}</p>
+                <p className="text-[10px] font-bold text-emerald-200">TOTAL SALDO TABUNGAN AKTIF</p>
+                <p className="text-2xl font-bold">Rp {hitungTotalSaldo().toLocaleString("id-ID")}</p>
               </div>
               <span className="text-3xl">💰</span>
             </div>
-          </div>
-        )}
-
-        {/* Tab 7: e-Rapor PAUD */}
-        {activeTab === "rapor" && (
-          <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
-            <h2 className="text-sm font-bold text-slate-800 border-b pb-2">e-Rapor PAUD Digital (PDF)</h2>
-            {!raporUrl ? (
-              <div className="text-xs text-slate-500 bg-slate-50 p-6 rounded-xl text-center">Guru belum mengunggah file e-Rapor.</div>
-            ) : (
-              <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-3 text-center">
-                <span className="text-4xl">📄</span>
-                <div>
-                  <p className="text-xs font-bold text-emerald-950">File e-Rapor PAUD Digital Diterbitkan!</p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Silakan klik tombol di bawah untuk mengunduh PDF e-Rapor.</p>
-                </div>
-                <a href={raporUrl} download="e-Rapor-PAUD.pdf" className="inline-block bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl">
-                  📥 Unduh File e-Rapor (PDF)
-                </a>
-              </div>
-            )}
           </div>
         )}
 
@@ -513,20 +400,7 @@ export default function PortalWali() {
                 <option value="Kelas A">Kelas A (4-5 Tahun)</option>
                 <option value="Kelas B">Kelas B (5-6 Tahun)</option>
               </select>
-              <div className="grid grid-cols-2 gap-2">
-                <input type="text" placeholder="Tempat Lahir" value={tempatLahir} onChange={(e) => setTempatLahir(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-                <input type="date" value={tanggalLahir} onChange={(e) => setTanggalLahir(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-              </div>
-              <textarea placeholder="Alamat Domisili Lengkap" value={alamat} onChange={(e) => setAlamat(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required></textarea>
-              <div className="grid grid-cols-2 gap-2">
-                <input type="text" placeholder="Nama Ayah" value={namaAyah} onChange={(e) => setNamaAyah(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-                <input type="text" placeholder="Pekerjaan Ayah" value={pekerjaanAyah} onChange={(e) => setPekerjaanAyah(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <input type="text" placeholder="Nama Ibu" value={namaIbu} onChange={(e) => setNamaIbu(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-                <input type="text" placeholder="Pekerjaan Ibu" value={pekerjaanIbu} onChange={(e) => setPekerjaanIbu(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-              </div>
-              <button type="submit" className="w-full bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-xs">Kirim Formulir PPDB Online</button>
+              <button type="submit" className="w-full bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-xs">Kirim Formulir PPDB Online ke Cloud Database</button>
             </form>
           </div>
         )}
