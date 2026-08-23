@@ -17,7 +17,7 @@ export default function PortalWali() {
   const [metodeSPP, setMetodeSPP] = useState<"qris" | "transfer">("qris");
   const [sudahBayarSPP, setSudahBayarSPP] = useState(false);
 
-  // State Fitur Infaq & ZIS
+  // State Fitur Infaq & ZIS (Lazismu)
   const [jenisInfaq, setJenisInfaq] = useState("Infaq");
   const [totalHartaZakat, setTotalHartaZakat] = useState("");
   const [nominalInfaq, setNominalInfaq] = useState("");
@@ -152,7 +152,7 @@ export default function PortalWali() {
               activeTab === "infaq" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-slate-50"
             }`}
           >
-            🕌 Infaq & ZIS
+            🕌 Infaq & ZIS (Lazismu)
           </button>
           <button
             onClick={() => setActiveTab("jurnal")}
@@ -317,14 +317,26 @@ export default function PortalWali() {
           </div>
         )}
 
-        {/* Tab 3: Infaq & ZIS */}
+        {/* Tab 3: Infaq & ZIS Kemitraan Lazismu */}
         {activeTab === "infaq" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-            <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Layanan Infaq, Sadaqah & Zakat</h2>
+            <div className="flex justify-between items-center border-b pb-2">
+              <h2 className="text-sm font-bold text-slate-800">Layanan Infaq, Sadaqah & Zakat (Lazismu)</h2>
+              <span className="bg-orange-100 text-orange-800 border border-orange-300 font-bold text-[10px] px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                🧡 Mitra Resmi Lazismu
+              </span>
+            </div>
+
+            <div className="bg-orange-50 border border-orange-200 p-3 rounded-xl text-xs text-orange-950 flex items-start gap-2">
+              <span className="text-base">🤝</span>
+              <p>
+                Seluruh dana Infaq, Sadaqah, & Zakat yang ditunaikan di aplikasi ini disalurkan <strong>langsung ke Rekening / QRIS Resmi LAZISMU (Lembaga Amil Zakat Muhammadiyah)</strong> secara aman, transparan, & tersertifikasi syariah.
+              </p>
+            </div>
             
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Jenis Penyaluran</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Jenis Penyaluran ZIS</label>
                 <select
                   value={jenisInfaq}
                   onChange={(e) => {
@@ -387,7 +399,7 @@ export default function PortalWali() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Metode Pembayaran</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Metode Pembayaran Lazismu</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -396,7 +408,7 @@ export default function PortalWali() {
                       metodeInfaq === "qris" ? "bg-emerald-50 border-emerald-600 text-emerald-800" : "border-slate-200 text-slate-600"
                     }`}
                   >
-                    📱 Scan QRIS
+                    📱 Scan QRIS Lazismu
                   </button>
                   <button
                     type="button"
@@ -405,40 +417,43 @@ export default function PortalWali() {
                       metodeInfaq === "transfer" ? "bg-emerald-50 border-emerald-600 text-emerald-800" : "border-slate-200 text-slate-600"
                     }`}
                   >
-                    🏦 Transfer Bank
+                    🏦 Transfer Rekening Lazismu
                   </button>
                 </div>
               </div>
 
               {metodeInfaq === "qris" ? (
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-2">
-                  <p className="text-xs font-bold text-slate-700">QRIS RESMI PENYALURAN TK 'AISYIYAH SADIREJO</p>
-                  <div className="w-36 h-36 mx-auto bg-white p-2 border border-slate-300 rounded-xl flex items-center justify-center">
-                    <span className="text-xs text-slate-400 font-semibold">[ Barcode QRIS ]</span>
+                  <p className="text-xs font-bold text-orange-800">QRIS NATIONAL RESMI LAZISMU</p>
+                  <div className="w-40 h-40 mx-auto bg-white p-2 border border-slate-300 rounded-xl flex items-center justify-center">
+                    <span className="text-xs text-slate-400 font-semibold">[ Barcode QRIS Lazismu ]</span>
                   </div>
                 </div>
               ) : (
                 <div className="p-3 bg-white border border-slate-300 rounded-lg text-xs space-y-1">
                   <p className="text-slate-600">Bank: <strong>Bank Syariah Indonesia (BSI)</strong></p>
-                  <p className="text-slate-600">No. Rekening: <strong className="text-emerald-700">7123-4567-89</strong></p>
-                  <p className="text-slate-600">Atas Nama: <strong>INFAQ TK AISYIYAH SADIREJO</strong></p>
+                  <p className="text-slate-600">No. Rekening: <strong className="text-emerald-700">777-1234-567</strong></p>
+                  <p className="text-slate-600">Atas Nama: <strong>LAZISMU KANTOR LAYANAN</strong></p>
                 </div>
               )}
 
               {!sudahBayarInfaq ? (
                 <div className="space-y-2 pt-2 border-t">
-                  <label className="block text-xs font-semibold text-slate-700">Upload Bukti Transaksi</label>
+                  <label className="block text-xs font-semibold text-slate-700">Upload Bukti Transfer / Transaksi Lazismu</label>
                   <input type="file" accept="image/*" className="w-full text-xs p-2 border border-slate-300 rounded-lg" />
                   <button
                     onClick={() => setSudahBayarInfaq(true)}
                     className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg text-xs transition"
                   >
-                    Kirim {jenisInfaq}
+                    Tunaikan {jenisInfaq} ke Lazismu
                   </button>
                 </div>
               ) : (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 font-bold">
-                  ✓ Penyaluran {jenisInfaq} berhasil dikirim. Jazakumullah Khairan atas kedermawanan Bapak/Ibu.
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 space-y-1">
+                  <p className="font-bold">✓ Penyaluran {jenisInfaq} Berhasil Ditunaikan!</p>
+                  <p className="text-[11px] text-emerald-800 italic">
+                    "Ajarakallahu fiimaa a'thaita, wa baaraka fiimaa abqaita, wa ja'alahu laka thahuuraa" (Semoga Allah memberikan pahala atas apa yang telah engkau berikan, memberkahi apa yang engkau sisakan, dan menjadikannya pembersih bagimu). Jazakumullah Khairan.
+                  </p>
                 </div>
               )}
             </div>
