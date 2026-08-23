@@ -7,9 +7,10 @@ export default function PortalTU() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [nbm, setNbm] = useState("");
   const [password, setPassword] = useState("");
-  
-  // State Tahun Ajaran Active
+
+  // State Global Filter Tahun Ajaran & Cari Siswa
   const [tahunAjaran, setTahunAjaran] = useState("2026/2027");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [activeTab, setActiveTab] = useState<"ppdb" | "laporan" | "tabungan" | "rapor" | "tagihan" | "wa">("ppdb");
 
@@ -57,6 +58,78 @@ export default function PortalTU() {
     e.preventDefault();
     if (nbm && password) setIsLoggedIn(true);
     else alert("Harap isi NBM dan Password!");
+  };
+
+  // Ubah Status Siswa PPDB (Diterima, Aktif, Pindah, Lulus)
+  const handleUpdateStatusSiswa = (index: number, statusBaru: string) => {
+    const updated = [...daftarPPDB];
+    updated[index].status = statusBaru;
+
+    if (statusBaru === "AKTIF (LUNAS 100%)") {
+      updated[index].keteranganLunas = `✓ LUNAS PEMBAYARAN PENDAFTARAN (T.A. ${tahunAjaran})`;
+      updated[index].persentaseBayar = 100;
+    } else if (statusBaru === "DITERIMA (DP 50%)") {
+      updated[index].persentaseBayar = 50;
+    }
+
+    localStorage.setItem("tu_daftar_ppdb", JSON.stringify(updated));
+    setDaftarPPDB(updated);
+
+    // Update Kartu Digital Wali
+    localStorage.setItem("ppdb_data_siswa", JSON.stringify(updated[index]));
+
+    alert(`Status Siswa ${updated[index].namaAnak} Berhasil Diperbarui Menjadi: ${statusBaru}`);
+  };
+
+  // Cetak / Download Form PPDB PDF
+  const handleDownloadFormPPDB = (siswa: any) => {
+    const printContent = `
+      <html>
+        <head>
+          <title>Formulir PPDB - ${siswa.namaAnak}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+            .title { font-size: 16px; font-weight: bold; }
+            .subtitle { font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            td { padding: 8px; font-size: 12px; border-bottom: 1px solid #ddd; }
+            .label { font-weight: bold; width: 35%; }
+            .footer { margin-top: 40px; text-align: right; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</div>
+            <div class="subtitle">FORMULIR PENDAFTARAN PESERTA DIDIK BARU (PPDB)</div>
+            <div class="subtitle">TAHUN AJARAN ${tahunAjaran}</div>
+          </div>
+          <table>
+            <tr><td class="label">Nama Lengkap Anak</td><td>: ${siswa.namaAnak}</td></tr>
+            <tr><td class="label">NIK Anak</td><td>: ${siswa.nikAnak}</td></tr>
+            <tr><td class="label">Kelompok Target</td><td>: ${siswa.kelasTarget}</td></tr>
+            <tr><td class="label">Tempat, Tanggal Lahir</td><td>: ${siswa.tempatLahir}, ${siswa.tanggalLahir}</td></tr>
+            <tr><td class="label">Alamat Lengkap</td><td>: ${siswa.alamat}</td></tr>
+            <tr><td class="label">Nama Ayah / Pekerjaan</td><td>: ${siswa.namaAyah} (${siswa.pekerjaanAyah})</td></tr>
+            <tr><td class="label">Nama Ibu / Pekerjaan</td><td>: ${siswa.namaIbu} (${siswa.pekerjaanIbu})</td></tr>
+            <tr><td class="label">Nama Wali / No. WA</td><td>: ${siswa.namaWali} (${siswa.waWali})</td></tr>
+            <tr><td class="label">Tanggal Pendaftaran</td><td>: ${siswa.tanggalDaftar}</td></tr>
+            <tr><td class="label">Status Pendaftaran</td><td>: <strong>${siswa.status}</strong></td></tr>
+          </table>
+          <div class="footer">
+            <p>Sadirejo, ${new Date().toLocaleDateString("id-ID")}</p>
+            <p style="margin-top: 50px;"><strong>( Petugas Tata Usaha )</strong></p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.print();
+    }
   };
 
   // Verifikasi Pembayaran Masuk oleh TU & Terbitkan Kuitansi Digital
@@ -118,7 +191,9 @@ export default function PortalTU() {
     setDetailAcara("");
   };
 
-  // Rekap Perhitungan Saldo Tabungan Masing-Masing Anak
+  // Filter Data Berdasarkan Pencarian Siswa & Tahun Ajaran
+  const filteredPPDB = daftarPPDB.filter((s) => s.namaAnak?.toLowerCase().includes(searchQuery.toLowerCase()) || s.nikAnak?.includes(searchQuery));
+
   const hitungSaldoPerAnak = () => {
     const saldoMap: { [key: string]: number } = {};
     rekapTabungan.forEach((t) => {
@@ -176,9 +251,24 @@ export default function PortalTU() {
           </div>
         </div>
 
+        {/* Baris Pencarian Siswa Cepat */}
+        <div className="bg-white p-3 rounded-2xl shadow-sm border flex items-center gap-2">
+          <span className="text-xs font-bold text-slate-600">🔍 Cari Siswa:</span>
+          <input
+            type="text"
+            placeholder="Ketik Nama Siswa atau NIK..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 px-3 py-1.5 border rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} className="text-xs text-rose-600 font-bold px-2">Clear</button>
+          )}
+        </div>
+
         {/* Tab Navigasi Menu TU */}
         <div className="bg-white p-2 rounded-2xl shadow-sm border flex flex-wrap gap-1">
-          <button onClick={() => setActiveTab("ppdb")} className={`flex-1 min-w-[100px] py-2 rounded-xl text-xs font-semibold ${activeTab === "ppdb" ? "bg-orange-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>📄 PPDB ({daftarPPDB.length})</button>
+          <button onClick={() => setActiveTab("ppdb")} className={`flex-1 min-w-[100px] py-2 rounded-xl text-xs font-semibold ${activeTab === "ppdb" ? "bg-orange-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>📄 PPDB ({filteredPPDB.length})</button>
           <button onClick={() => setActiveTab("laporan")} className={`flex-1 min-w-[100px] py-2 rounded-xl text-xs font-semibold ${activeTab === "laporan" ? "bg-orange-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>📊 Laporan Uang Masuk</button>
           <button onClick={() => setActiveTab("tabungan")} className={`flex-1 min-w-[100px] py-2 rounded-xl text-xs font-semibold ${activeTab === "tabungan" ? "bg-orange-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>💰 Saldo Tabungan</button>
           <button onClick={() => setActiveTab("rapor")} className={`flex-1 min-w-[100px] py-2 rounded-xl text-xs font-semibold ${activeTab === "rapor" ? "bg-orange-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>📁 Unduh e-Rapor</button>
@@ -186,27 +276,49 @@ export default function PortalTU() {
           <button onClick={() => setActiveTab("wa")} className={`flex-1 min-w-[100px] py-2 rounded-xl text-xs font-semibold ${activeTab === "wa" ? "bg-orange-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>📢 Info WA Kegiatan</button>
         </div>
 
-        {/* Tab 1: PPDB */}
+        {/* Tab 1: PPDB & Kelola Status Siswa */}
         {activeTab === "ppdb" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
               <h2 className="text-sm font-bold text-slate-800">Verifikasi Pendaftaran PPDB Masuk</h2>
               <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full">T.A. {tahunAjaran}</span>
             </div>
-            {daftarPPDB.length === 0 ? (
+            {filteredPPDB.length === 0 ? (
               <div className="text-xs text-slate-500 bg-slate-50 p-8 rounded-xl text-center">Belum ada data pendaftar baru PPDB.</div>
             ) : (
               <div className="space-y-3">
-                {daftarPPDB.map((siswa, i) => (
-                  <div key={i} className="p-4 border rounded-xl space-y-2 bg-slate-50">
+                {filteredPPDB.map((siswa, i) => (
+                  <div key={i} className="p-4 border rounded-xl space-y-3 bg-slate-50">
                     <div className="flex justify-between items-start">
                       <div>
                         <h4 className="font-bold text-slate-800 text-sm">{siswa.namaAnak} ({siswa.kelasTarget})</h4>
                         <p className="text-xs text-slate-600">NIK: {siswa.nikAnak} | Alamat: {siswa.alamat}</p>
                         <p className="text-xs text-slate-600">Orang Tua: Ayah ({siswa.namaAyah}) | Ibu ({siswa.namaIbu})</p>
                         <p className="text-xs text-slate-500">Wali: {siswa.namaWali} ({siswa.waWali})</p>
+                        {siswa.keteranganLunas && (
+                          <p className="text-xs font-bold text-emerald-700 mt-1">{siswa.keteranganLunas}</p>
+                        )}
                       </div>
-                      <span className={`font-bold text-[10px] px-2.5 py-0.5 rounded-full uppercase ${siswa.status === "AKTIF" ? "bg-emerald-100 text-emerald-800" : siswa.status === "DITERIMA" ? "bg-sky-100 text-sky-800" : "bg-amber-100 text-amber-800"}`}>{siswa.status}</span>
+                      <span className={`font-bold text-[10px] px-2.5 py-0.5 rounded-full uppercase ${siswa.status?.includes("AKTIF") ? "bg-emerald-100 text-emerald-800" : siswa.status?.includes("DITERIMA") ? "bg-sky-100 text-sky-800" : siswa.status?.includes("PINDAH") ? "bg-slate-200 text-slate-700" : siswa.status?.includes("LULUS") ? "bg-purple-100 text-purple-800" : "bg-amber-100 text-amber-800"}`}>{siswa.status}</span>
+                    </div>
+
+                    {/* Tombol Kontrol Status Siswa & Cetak Form */}
+                    <div className="flex flex-wrap gap-1.5 pt-2 border-t text-xs">
+                      <button onClick={() => handleDownloadFormPPDB(siswa)} className="bg-slate-700 text-white font-semibold px-3 py-1.5 rounded-lg text-[11px] flex items-center gap-1">
+                        📄 Cetak / Download Form PPDB (PDF)
+                      </button>
+                      <button onClick={() => handleUpdateStatusSiswa(i, "DITERIMA (DP 50%)")} className="bg-sky-600 text-white font-semibold px-2.5 py-1.5 rounded-lg text-[11px]">
+                        ✓ Set DITERIMA (DP 50%)
+                      </button>
+                      <button onClick={() => handleUpdateStatusSiswa(i, "AKTIF (LUNAS 100%)")} className="bg-emerald-600 text-white font-semibold px-2.5 py-1.5 rounded-lg text-[11px]">
+                        ✓ Set AKTIF (LUNAS 100%)
+                      </button>
+                      <button onClick={() => handleUpdateStatusSiswa(i, "PINDAH SEKOAH")} className="bg-slate-500 text-white font-semibold px-2.5 py-1.5 rounded-lg text-[11px]">
+                        📦 Set PINDAH
+                      </button>
+                      <button onClick={() => handleUpdateStatusSiswa(i, "LULUS / ALUMNI")} className="bg-purple-600 text-white font-semibold px-2.5 py-1.5 rounded-lg text-[11px]">
+                        🎓 Set LULUS
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -215,7 +327,7 @@ export default function PortalTU() {
           </div>
         )}
 
-        {/* Tab 2: Laporan Uang Masuk Biaya Sekolah (Tanpa Infaq) */}
+        {/* Tab 2: Laporan Uang Masuk Biaya Sekolah */}
         {activeTab === "laporan" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
