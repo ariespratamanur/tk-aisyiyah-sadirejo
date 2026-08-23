@@ -3,18 +3,15 @@
 import Link from "next/link";
 
 export default function Home() {
-  // Logo Muhammadiyah dalam format SVG Data URI (Pasti Muncul)
-  const logoMuhammadiyah = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%2300875A'/><circle cx='50' cy='50' r='40' fill='%2313653F'/><polygon points='50,10 54,25 68,16 60,30 75,30 63,40 76,50 63,60 75,70 60,70 68,84 54,75 50,90 46,75 32,84 40,70 25,70 37,60 24,50 37,40 25,30 40,30 32,16 46,25' fill='%23FFFFFF'/><circle cx='50' cy='50' r='18' fill='%2313653F'/><text x='50' y='55' font-size='12' font-weight='bold' fill='%23FFFFFF' text-anchor='middle' font-family='Arial'>M</text></svg>";
-
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="bg-white p-6 rounded-3xl shadow-xl w-full max-w-md border border-slate-200 text-center space-y-6">
-        {/* Header & Logo */}
+        {/* Header & Logo 'Aisyiyah */}
         <div className="space-y-3">
           <img
-            src={logoMuhammadiyah}
-            alt="Logo Muhammadiyah"
-            className="w-16 h-16 mx-auto object-contain drop-shadow-md"
+            src="/logo.png"
+            alt="Logo 'Aisyiyah"
+            className="w-20 h-20 mx-auto object-contain drop-shadow-sm"
           />
           <div>
             <h1 className="text-lg font-bold text-emerald-950">
