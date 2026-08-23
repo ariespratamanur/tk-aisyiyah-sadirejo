@@ -39,10 +39,10 @@ export default function PortalTU() {
         <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md border border-slate-200">
           <div className="bg-orange-600 text-white p-4 rounded-xl text-center mb-6 space-y-2">
             <img
-              src="https://upload.wikimedia.org/wikipedia/commons/2/23/Logo_Muhammadiyah.svg"
-              alt="Logo Muhammadiyah"
-              className="w-12 h-12 mx-auto object-contain bg-white/10 p-1 rounded-full"
-            />
+  src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Logo_Muhammadiyah.svg/512px-Logo_Muhammadiyah.svg.png"
+  alt="Logo Muhammadiyah"
+  className="w-10 h-10 object-contain bg-white/10 p-1 rounded-full"
+/>
             <div>
               <h1 className="font-bold text-lg">Login Portal Tata Usaha (TU)</h1>
               <p className="text-xs text-orange-100 mt-0.5">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</p>
