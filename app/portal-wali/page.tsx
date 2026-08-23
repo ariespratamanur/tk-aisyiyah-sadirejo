@@ -11,7 +11,7 @@ export default function PortalWali() {
 
   const [activeTab, setActiveTab] = useState<"kartu" | "spp" | "infaq" | "jurnal" | "tabungan" | "rapor" | "ppdb">("kartu");
 
-  // Shared Realtime States Across Portals
+  // Shared Realtime States
   const [dataSiswa, setDataSiswa] = useState<any>(null);
   const [jurnalSiswa, setJurnalSiswa] = useState<any[]>([]);
   const [tabunganSiswa, setTabunganSiswa] = useState<any[]>([]);
@@ -30,14 +30,16 @@ export default function PortalWali() {
   const [namaIbu, setNamaIbu] = useState("");
   const [pekerjaanIbu, setPekerjaanIbu] = useState("");
 
-  // Bayar Biaya Sekolah & Infaq Lazismu
+  // Bayar Biaya Sekolah
   const [jenisBiaya, setJenisBiaya] = useState("SPP Bulanan");
   const [nominalBiaya, setNominalBiaya] = useState("150000");
   const [metodeSPP, setMetodeSPP] = useState<"qris" | "transfer">("qris");
   const [sudahBayarSPP, setSudahBayarSPP] = useState(false);
 
+  // Infaq Lazismu State
   const [jenisInfaq, setJenisInfaq] = useState("Infaq Sukarela");
   const [nominalInfaq, setNominalInfaq] = useState("");
+  const [metodeInfaq, setMetodeInfaq] = useState<"qris" | "transfer">("qris");
   const [sudahBayarInfaq, setSudahBayarInfaq] = useState(false);
 
   // Cek Sesi Login Wali
@@ -75,7 +77,6 @@ export default function PortalWali() {
     return () => clearInterval(interval);
   }, []);
 
-  // Handle Login Wali
   const handleWaliLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (namaWaliInput && noWaInput) {
@@ -140,7 +141,6 @@ export default function PortalWali() {
     existingLaporan.unshift(newLaporan);
     localStorage.setItem("tu_daftar_pembayaran", JSON.stringify(existingLaporan));
 
-    // Kuitansi Otomatis Revisi Sesuai Permintaan
     const newKuitansi = {
       id: Date.now(),
       jenis: jenisBiaya,
@@ -154,7 +154,6 @@ export default function PortalWali() {
     localStorage.setItem("integrated_kuitansi", JSON.stringify(existingKuitansi));
     setKuitansiList(existingKuitansi);
 
-    // Update Otomatis Status PPDB jika bayar Pendaftaran
     if (jenisBiaya === "Biaya Pendaftaran DP 50%" && dataSiswa) {
       const updatedSiswa = { ...dataSiswa, status: "DITERIMA", persentaseBayar: 50 };
       localStorage.setItem("ppdb_data_siswa", JSON.stringify(updatedSiswa));
@@ -170,7 +169,6 @@ export default function PortalWali() {
     return tabunganSiswa.reduce((acc, curr) => curr.jenis === "setor" ? acc + Number(curr.nominal) : acc - Number(curr.nominal), 0);
   };
 
-  // FORM LOGIN WAJIB
   if (!isWaliLoggedIn) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
@@ -289,7 +287,6 @@ export default function PortalWali() {
                   </div>
                 </div>
 
-                {/* Ketentuan Cicilan Pendaftaran */}
                 <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl text-xs space-y-2 text-amber-950">
                   <p className="font-bold flex items-center gap-1">📌 Aturan Skema Pembayaran Biaya Pendaftaran:</p>
                   <ul className="list-disc list-inside space-y-1 text-[11px] text-amber-900">
@@ -341,6 +338,21 @@ export default function PortalWali() {
                 <button type="button" onClick={() => setMetodeSPP("transfer")} className={`py-2 text-xs font-semibold rounded-lg border ${metodeSPP === "transfer" ? "bg-emerald-50 border-emerald-600 text-emerald-800" : "border-slate-200"}`}>🏦 Transfer Bank BSI</button>
               </div>
 
+              {metodeSPP === "qris" ? (
+                <div className="p-4 bg-slate-50 border rounded-xl text-center space-y-2">
+                  <p className="text-xs font-bold text-slate-700">QRIS RESMI SEKOLAH TK 'AISYIYAH SADIREJO</p>
+                  <div className="w-36 h-36 mx-auto bg-white p-2 border rounded-xl flex items-center justify-center">
+                    <span className="text-xs text-slate-400 font-semibold">[ Barcode QRIS Sekolah ]</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-slate-50 border rounded-xl text-xs space-y-1">
+                  <p className="text-slate-600">Bank Tujuan: <strong>Bank Syariah Indonesia (BSI)</strong></p>
+                  <p className="text-slate-600">No. Rekening: <strong className="text-emerald-700">7123-4567-89</strong></p>
+                  <p className="text-slate-600">Atas Nama: <strong>TK AISYIYAH SADIREJO</strong></p>
+                </div>
+              )}
+
               {!sudahBayarSPP ? (
                 <button onClick={handleConfirmPembayaran} className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg text-xs">Konfirmasi & Kirim Pembayaran</button>
               ) : (
@@ -376,7 +388,7 @@ export default function PortalWali() {
           </div>
         )}
 
-        {/* Tab 3: Infaq Sukarela Lazismu */}
+        {/* Tab 3: Infaq Sukarela Lazismu (Lengkap Rekening & QRIS) */}
         {activeTab === "infaq" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -385,17 +397,49 @@ export default function PortalWali() {
             </div>
 
             <div className="space-y-3">
-              <select value={jenisInfaq} onChange={(e) => setJenisInfaq(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs">
-                <option value="Infaq Sukarela">Infaq Sukarela</option>
-                <option value="Sadaqah">Sadaqah</option>
-                <option value="Zakat Fitri">Zakat Fitri</option>
-                <option value="Zakat Maal">Zakat Maal (2.5% Harta)</option>
-              </select>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Jenis Penyaluran</label>
+                <select value={jenisInfaq} onChange={(e) => setJenisInfaq(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs">
+                  <option value="Infaq Sukarela">Infaq Sukarela</option>
+                  <option value="Sadaqah">Sadaqah</option>
+                  <option value="Zakat Fitri">Zakat Fitri</option>
+                  <option value="Zakat Maal">Zakat Maal (2.5% Harta)</option>
+                </select>
+              </div>
 
-              <input type="number" placeholder="Nominal Infaq / ZIS (Rp)" value={nominalInfaq} onChange={(e) => setNominalInfaq(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs font-bold" />
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Nominal Infaq / ZIS (Rp)</label>
+                <input type="number" placeholder="Contoh: 50000" value={nominalInfaq} onChange={(e) => setNominalInfaq(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs font-bold" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Metode Penyaluran</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setMetodeInfaq("qris")} className={`py-2 text-xs font-semibold rounded-lg border ${metodeInfaq === "qris" ? "bg-orange-50 border-orange-500 text-orange-800" : "border-slate-200"}`}>📱 Scan QRIS Lazismu</button>
+                  <button type="button" onClick={() => setMetodeInfaq("transfer")} className={`py-2 text-xs font-semibold rounded-lg border ${metodeInfaq === "transfer" ? "bg-orange-50 border-orange-500 text-orange-800" : "border-slate-200"}`}>🏦 Transfer Rekening Lazismu</button>
+                </div>
+              </div>
+
+              {/* TAMPILAN REKENING & QRIS LAZISMU LENGKAP */}
+              {metodeInfaq === "qris" ? (
+                <div className="p-4 bg-orange-50/50 border border-orange-200 rounded-xl text-center space-y-2">
+                  <p className="text-xs font-bold text-orange-900">QRIS NATIONAL RESMI LAZISMU</p>
+                  <div className="w-40 h-40 mx-auto bg-white p-2 border rounded-xl flex items-center justify-center shadow-sm">
+                    <span className="text-xs text-slate-400 font-semibold">[ Barcode QRIS Lazismu ]</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500">Scan melalui BCA Mobile, BSI Mobile, GoPay, OVO, Dana, ShopeePay</p>
+                </div>
+              ) : (
+                <div className="p-3 bg-orange-50/50 border border-orange-200 rounded-xl text-xs space-y-1">
+                  <p className="text-orange-950 font-bold mb-1">REKENING TUKAR PENYALURAN LAZISMU:</p>
+                  <p className="text-slate-700">Bank Tujuan: <strong>Bank Syariah Indonesia (BSI)</strong></p>
+                  <p className="text-slate-700">No. Rekening: <strong className="text-emerald-700 text-sm">777-1234-567</strong></p>
+                  <p className="text-slate-700">Atas Nama: <strong>LAZISMU KANTOR LAYANAN SADIREJO</strong></p>
+                </div>
+              )}
 
               {!sudahBayarInfaq ? (
-                <button onClick={() => setSudahBayarInfaq(true)} className="w-full bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-xs">Tunaikan Infaq ke Lazismu</button>
+                <button onClick={() => setSudahBayarInfaq(true)} className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg text-xs">Tunaikan Infaq ke Lazismu</button>
               ) : (
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 space-y-1">
                   <p className="font-bold">Assalamu'alaikum Wr. Wb.</p>
