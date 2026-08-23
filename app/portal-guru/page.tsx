@@ -510,11 +510,11 @@ export default function PortalGuruPage() {
           </div>
         )}
 
-        {/* TAB 3: UPLOAD e-Rapor PAUD */}
+        {/* TAB 3: Upload e-Rapor PAUD (File PDF) */}
         {activeTab === 'rapor' && (
           <div className="bg-white p-4 rounded-2xl border shadow-sm space-y-3">
             <h2 className="font-bold text-slate-800 border-b pb-2 flex items-center gap-1">
-              📄 Upload Rapor Digital RDM (File PDF)
+              📄 Upload e-Rapor PAUD (File PDF)
             </h2>
 
             {selectedStudent && (
