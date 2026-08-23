@@ -8,7 +8,7 @@ export default function PortalTU() {
   const [nbm, setNbm] = useState("");
   const [password, setPassword] = useState("");
 
-  // Options Tahun Ajaran & Filter Kelas
+  // Options Tahun Ajaran & Filter
   const [opsiTahunAjaran] = useState([
     "2026/2027",
     "2027/2028",
@@ -78,7 +78,7 @@ export default function PortalTU() {
     else alert("Harap isi NBM dan Password!");
   };
 
-  // Ubah Status Siswa PPDB (Diterima, Aktif, Pindah, Lulus)
+  // Status Siswa PPDB
   const handleUpdateStatusSiswa = (index: number, statusBaru: string) => {
     const updated = [...daftarPPDB];
     updated[index].status = statusBaru;
@@ -97,7 +97,7 @@ export default function PortalTU() {
     alert(`Status Siswa ${updated[index].namaAnak} Berhasil Diperbarui Menjadi: ${statusBaru}`);
   };
 
-  // Cetak & Download Form PPDB (PDF)
+  // Cetak PDF Form PPDB
   const handleDownloadFormPPDB = (siswa: any) => {
     const printContent = `
       <html>
@@ -192,7 +192,7 @@ export default function PortalTU() {
     alert(`Pembayaran Rp ${Number(targetBayar.nominal).toLocaleString("id-ID")} Berhasil Diverifikasi! Kuitansi resmi otomatis terbit di Portal Wali.`);
   };
 
-  // Kirim Tagihan ke WA Wali
+  // Kirim Tagihan via WA
   const handleKirimTagihanWA = (e: React.FormEvent) => {
     e.preventDefault();
     if (!siswaTargetTagihan || !nominalTagihanInput) return alert("Pilih siswa & isi nominal tagihan!");
@@ -227,7 +227,7 @@ export default function PortalTU() {
     setDetailAcara("");
   };
 
-  // Filter Data
+  // Filter Data Global
   const filteredPPDB = daftarPPDB.filter((s) => {
     const matchTA = !s.tahunAjaran || s.tahunAjaran === tahunAjaran;
     const matchQuery = !searchQuery || s.namaAnak?.toLowerCase().includes(searchQuery.toLowerCase()) || s.nikAnak?.includes(searchQuery);
@@ -240,12 +240,13 @@ export default function PortalTU() {
     return matchTA && matchQuery;
   });
 
-  // Filter Siswa untuk Tagihan & Info WA
+  // Filter Terpisah Siswa Kelas A & B untuk Buat Tagihan
   const listSiswaTagihanFiltered = filteredPPDB.filter((s) => {
     if (filterKelasTagihan === "SEMUA") return true;
     return s.kelasTarget === filterKelasTagihan;
   });
 
+  // Filter Terpisah Siswa Kelas A & B untuk Info WA Kegiatan
   const listSiswaInfoFiltered = filteredPPDB.filter((s) => {
     if (filterKelasInfo === "SEMUA") return true;
     return s.kelasTarget === filterKelasInfo;
@@ -337,7 +338,7 @@ export default function PortalTU() {
           <button onClick={() => setActiveTab("wa")} className={`flex-1 min-w-[100px] py-2 rounded-xl text-xs font-semibold ${activeTab === "wa" ? "bg-orange-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>📢 Info WA Kegiatan</button>
         </div>
 
-        {/* Tab 1: PPDB & Kelola Status Siswa */}
+        {/* Tab 1: PPDB */}
         {activeTab === "ppdb" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -388,7 +389,7 @@ export default function PortalTU() {
           </div>
         )}
 
-        {/* Tab 2: Laporan Uang Masuk Biaya Sekolah */}
+        {/* Tab 2: Laporan Uang Masuk dengan Tombol Unduh / Lihat Bukti Bayar */}
         {activeTab === "laporan" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -401,22 +402,25 @@ export default function PortalTU() {
             ) : (
               <div className="space-y-3">
                 {filteredPembayaran.map((p, i) => (
-                  <div key={i} className="p-4 border rounded-xl space-y-2 bg-slate-50 flex flex-wrap justify-between items-center">
+                  <div key={i} className="p-4 border rounded-xl space-y-2 bg-slate-50 flex flex-wrap justify-between items-center gap-2">
                     <div>
                       <p className="font-bold text-slate-800 text-xs">{p.jenis} - Wali: {p.wali}</p>
                       <p className="text-xs text-slate-600">Siswa Target: <strong>{p.namaAnak}</strong></p>
-                      <p className="text-[10px] text-slate-500">{p.tanggal} | Nominal: <strong className="text-emerald-700">Rp {Number(p.nominal).toLocaleString("id-ID")}</strong></p>
+                      <p className="text-[10px] text-slate-500">{p.tanggal} | Total: <strong className="text-emerald-700">Rp {Number(p.nominal).toLocaleString("id-ID")}</strong></p>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => handleLihatBukti(p.buktiUrl)} className="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-3 py-2 rounded-xl transition">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={() => handleLihatBukti(p.buktiUrl)}
+                        className="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1 shadow-sm"
+                      >
                         🖼️ Lihat / Unduh Bukti Bayar
                       </button>
 
                       {p.status === "verified" ? (
-                        <span className="bg-emerald-100 text-emerald-800 font-bold text-xs px-3 py-1 rounded-full">✓ Kuitansi Terbit</span>
+                        <span className="bg-emerald-100 text-emerald-800 font-bold text-xs px-3 py-2 rounded-xl">✓ Kuitansi Terbit</span>
                       ) : (
-                        <button onClick={() => handleVerifikasiBayar(i)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-2 rounded-xl transition">
+                        <button onClick={() => handleVerifikasiBayar(i)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-2 rounded-xl transition shadow-sm">
                           ✓ Cek Bukti & Terbitkan Kuitansi
                         </button>
                       )}
@@ -428,7 +432,7 @@ export default function PortalTU() {
           </div>
         )}
 
-        {/* Tab 3: Saldo Tabungan Masing-Masing Anak */}
+        {/* Tab 3: Saldo Tabungan */}
         {activeTab === "tabungan" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -454,7 +458,7 @@ export default function PortalTU() {
           </div>
         )}
 
-        {/* Tab 4: Unduh e-Rapor PAUD (PDF) */}
+        {/* Tab 4: Unduh e-Rapor */}
         {activeTab === "rapor" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -481,7 +485,7 @@ export default function PortalTU() {
           </div>
         )}
 
-        {/* Tab 5: Buat Tagihan WA dengan Filter Kelas A & Kelas B */}
+        {/* Tab 5: Buat Tagihan WA dengan Filter Terpisah Kelas A & Kelas B */}
         {activeTab === "tagihan" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -490,39 +494,58 @@ export default function PortalTU() {
             </div>
 
             <form onSubmit={handleKirimTagihanWA} className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Filter Kelompok Kelas</label>
-                  <select
-                    value={filterKelasTagihan}
-                    onChange={(e) => {
-                      setFilterKelasTagihan(e.target.value);
+              {/* Filter Terpisah Kelas A & Kelas B */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">1. Filter Kelompok Kelas Siswa</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterKelasTagihan("SEMUA");
                       setSiswaTargetTagihan("");
                     }}
-                    className="w-full px-3 py-2 border rounded-lg text-xs bg-slate-50 font-bold"
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border ${filterKelasTagihan === "SEMUA" ? "bg-orange-600 text-white border-orange-600" : "bg-slate-50 text-slate-700"}`}
                   >
-                    <option value="SEMUA">-- Tampilkan Semua Kelas --</option>
-                    <option value="Kelas A">Kelompok Kelas A</option>
-                    <option value="Kelas B">Kelompok Kelas B</option>
-                  </select>
+                    Semua Siswa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterKelasTagihan("Kelas A");
+                      setSiswaTargetTagihan("");
+                    }}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border ${filterKelasTagihan === "Kelas A" ? "bg-orange-600 text-white border-orange-600" : "bg-slate-50 text-slate-700"}`}
+                  >
+                    Siswa Kelas A
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterKelasTagihan("Kelas B");
+                      setSiswaTargetTagihan("");
+                    }}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border ${filterKelasTagihan === "Kelas B" ? "bg-orange-600 text-white border-orange-600" : "bg-slate-50 text-slate-700"}`}
+                  >
+                    Siswa Kelas B
+                  </button>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Siswa Target ({tahunAjaran})</label>
-                  <select
-                    value={siswaTargetTagihan}
-                    onChange={(e) => setSiswaTargetTagihan(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg text-xs"
-                    required
-                  >
-                    <option value="">-- Pilih Siswa ({listSiswaTagihanFiltered.length} Siswa) --</option>
-                    {listSiswaTagihanFiltered.map((s, i) => (
-                      <option key={i} value={s.namaAnak}>
-                        {s.namaAnak} ({s.kelasTarget}) - Wali: {s.namaWali}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">2. Pilih Siswa Target ({filterKelasTagihan})</label>
+                <select
+                  value={siswaTargetTagihan}
+                  onChange={(e) => setSiswaTargetTagihan(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-xs font-medium"
+                  required
+                >
+                  <option value="">-- Pilih Siswa ({listSiswaTagihanFiltered.length} Terdaftar) --</option>
+                  {listSiswaTagihanFiltered.map((s, i) => (
+                    <option key={i} value={s.namaAnak}>
+                      {s.namaAnak} ({s.kelasTarget}) - Wali: {s.namaWali}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -552,7 +575,7 @@ export default function PortalTU() {
           </div>
         )}
 
-        {/* Tab 6: Info WA Kegiatan dengan Filter Kelas A & Kelas B */}
+        {/* Tab 6: Info WA Kegiatan dengan Filter Terpisah Kelas A & Kelas B */}
         {activeTab === "wa" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -561,34 +584,52 @@ export default function PortalTU() {
             </div>
 
             <form onSubmit={handleKirimInfoWA} className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Filter Kelompok Kelas Target</label>
-                  <select
-                    value={filterKelasInfo}
-                    onChange={(e) => {
-                      setFilterKelasInfo(e.target.value);
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">1. Filter Kelompok Kelas Penerima</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterKelasInfo("SEMUA");
                       setWaliTargetWA("");
                     }}
-                    className="w-full px-3 py-2 border rounded-lg text-xs bg-slate-50 font-bold"
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border ${filterKelasInfo === "SEMUA" ? "bg-orange-600 text-white border-orange-600" : "bg-slate-50 text-slate-700"}`}
                   >
-                    <option value="SEMUA">-- Tampilkan Semua Kelas --</option>
-                    <option value="Kelas A">Kelompok Kelas A</option>
-                    <option value="Kelas B">Kelompok Kelas B</option>
-                  </select>
+                    Semua Kelas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterKelasInfo("Kelas A");
+                      setWaliTargetWA("");
+                    }}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border ${filterKelasInfo === "Kelas A" ? "bg-orange-600 text-white border-orange-600" : "bg-slate-50 text-slate-700"}`}
+                  >
+                    Kelas A
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterKelasInfo("Kelas B");
+                      setWaliTargetWA("");
+                    }}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold border ${filterKelasInfo === "Kelas B" ? "bg-orange-600 text-white border-orange-600" : "bg-slate-50 text-slate-700"}`}
+                  >
+                    Kelas B
+                  </button>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Wali Murid Penerima ({tahunAjaran})</label>
-                  <select value={waliTargetWA} onChange={(e) => setWaliTargetWA(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs">
-                    <option value="">-- Semua Wali Murid / Pilih Spesifik --</option>
-                    {listSiswaInfoFiltered.map((s, i) => (
-                      <option key={i} value={s.namaAnak}>
-                        Wali dari {s.namaAnak} ({s.kelasTarget}) - {s.namaWali}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">2. Pilih Wali Murid Penerima ({filterKelasInfo})</label>
+                <select value={waliTargetWA} onChange={(e) => setWaliTargetWA(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs">
+                  <option value="">-- Kirim Ke Semua Wali / Pilih Spesifik --</option>
+                  {listSiswaInfoFiltered.map((s, i) => (
+                    <option key={i} value={s.namaAnak}>
+                      Wali dari {s.namaAnak} ({s.kelasTarget}) - {s.namaWali}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
