@@ -8,31 +8,49 @@ export default function PortalTU() {
   const [nbm, setNbm] = useState("");
   const [password, setPassword] = useState("");
 
-  // State Global Filter Tahun Ajaran & Cari Siswa
+  // Options Tahun Ajaran & Filter Kelas
+  const [opsiTahunAjaran] = useState([
+    "2026/2027",
+    "2027/2028",
+    "2028/2029",
+    "2029/2030",
+    "2030/2031",
+  ]);
   const [tahunAjaran, setTahunAjaran] = useState("2026/2027");
+  const [filterKelasTagihan, setFilterKelasTagihan] = useState("SEMUA"); // "SEMUA", "Kelas A", "Kelas B"
+  const [filterKelasInfo, setFilterKelasInfo] = useState("SEMUA"); // "SEMUA", "Kelas A", "Kelas B"
   const [searchQuery, setSearchQuery] = useState("");
 
   const [activeTab, setActiveTab] = useState<"ppdb" | "laporan" | "tabungan" | "rapor" | "tagihan" | "wa">("ppdb");
 
-  // Realtime Data States
   const [daftarPPDB, setDaftarPPDB] = useState<any[]>([]);
   const [daftarPembayaran, setDaftarPembayaran] = useState<any[]>([]);
   const [rekapTabungan, setRekapTabungan] = useState<any[]>([]);
   const [raporUrl, setRaporUrl] = useState<string | null>(null);
 
-  // Form Tagihan WA State
+  // Form Tagihan WA
   const [siswaTargetTagihan, setSiswaTargetTagihan] = useState("");
   const [jenisTagihanInput, setJenisTagihanInput] = useState("SPP Bulanan");
   const [nominalTagihanInput, setNominalTagihanInput] = useState("");
   const [periodeTagihanInput, setPeriodeTagihanInput] = useState("Agustus 2026");
 
-  // Form Info WA Kegiatan State
+  // Form Info WA Kegiatan
   const [waliTargetWA, setWaliTargetWA] = useState("");
   const [namaAcara, setNamaAcara] = useState("");
   const [tanggalAcara, setTanggalAcara] = useState("");
   const [jamAcara, setJamAcara] = useState("");
   const [tempatAcara, setTempatAcara] = useState("");
   const [detailAcara, setDetailAcara] = useState("");
+
+  useEffect(() => {
+    const savedTA = localStorage.getItem("selected_ta");
+    if (savedTA) setTahunAjaran(savedTA);
+  }, []);
+
+  const handleTAChange = (taBaru: string) => {
+    setTahunAjaran(taBaru);
+    localStorage.setItem("selected_ta", taBaru);
+  };
 
   const syncTUData = () => {
     const savedPPDB = JSON.parse(localStorage.getItem("tu_daftar_ppdb") || "[]");
@@ -74,35 +92,33 @@ export default function PortalTU() {
 
     localStorage.setItem("tu_daftar_ppdb", JSON.stringify(updated));
     setDaftarPPDB(updated);
-
-    // Update Kartu Digital Wali
     localStorage.setItem("ppdb_data_siswa", JSON.stringify(updated[index]));
 
     alert(`Status Siswa ${updated[index].namaAnak} Berhasil Diperbarui Menjadi: ${statusBaru}`);
   };
 
-  // Cetak / Download Form PPDB PDF
+  // Cetak & Download Form PPDB (PDF)
   const handleDownloadFormPPDB = (siswa: any) => {
     const printContent = `
       <html>
         <head>
           <title>Formulir PPDB - ${siswa.namaAnak}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+            body { font-family: Arial, sans-serif; padding: 25px; color: #333; }
             .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
             .title { font-size: 16px; font-weight: bold; }
             .subtitle { font-size: 12px; }
             table { width: 100%; border-collapse: collapse; margin-top: 15px; }
             td { padding: 8px; font-size: 12px; border-bottom: 1px solid #ddd; }
             .label { font-weight: bold; width: 35%; }
-            .footer { margin-top: 40px; text-align: right; font-size: 12px; }
+            .footer { margin-top: 50px; text-align: right; font-size: 12px; }
           </style>
         </head>
         <body>
           <div class="header">
             <div class="title">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</div>
             <div class="subtitle">FORMULIR PENDAFTARAN PESERTA DIDIK BARU (PPDB)</div>
-            <div class="subtitle">TAHUN AJARAN ${tahunAjaran}</div>
+            <div class="subtitle">TAHUN AJARAN ${siswa.tahunAjaran || tahunAjaran}</div>
           </div>
           <table>
             <tr><td class="label">Nama Lengkap Anak</td><td>: ${siswa.namaAnak}</td></tr>
@@ -118,7 +134,8 @@ export default function PortalTU() {
           </table>
           <div class="footer">
             <p>Sadirejo, ${new Date().toLocaleDateString("id-ID")}</p>
-            <p style="margin-top: 50px;"><strong>( Petugas Tata Usaha )</strong></p>
+            <br/><br/>
+            <p><strong>( Petugas Tata Usaha )</strong></p>
           </div>
         </body>
       </html>
@@ -132,7 +149,26 @@ export default function PortalTU() {
     }
   };
 
-  // Verifikasi Pembayaran Masuk oleh TU & Terbitkan Kuitansi Digital
+  // Lihat & Unduh Foto Bukti Bayar
+  const handleLihatBukti = (buktiUrl: string) => {
+    if (!buktiUrl) return alert("Wali murid belum mengunggah foto bukti pembayaran.");
+    const win = window.open();
+    if (win) {
+      win.document.write(`
+        <html>
+          <head><title>Bukti Pembayaran Masuk</title></head>
+          <body style="margin:0; background:#1e293b; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; color:#fff; font-family:sans-serif;">
+            <h3 style="margin-bottom:15px;">Bukti Pembayaran Resmi Wali Murid</h3>
+            <img src="${buktiUrl}" style="max-width:90%; max-height:80vh; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.5);" />
+            <br/>
+            <a href="${buktiUrl}" download="Bukti-Bayar.png" style="background:#059669; color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:12px;">📥 Unduh Gambar Bukti Bayar</a>
+          </body>
+        </html>
+      `);
+    }
+  };
+
+  // Verifikasi Bayar & Terbitkan Kuitansi
   const handleVerifikasiBayar = (index: number) => {
     const targetBayar = daftarPembayaran[index];
 
@@ -173,7 +209,7 @@ export default function PortalTU() {
     setNominalTagihanInput("");
   };
 
-  // Kirim Info WA Kegiatan Sekolah
+  // Kirim Info WA Kegiatan
   const handleKirimInfoWA = (e: React.FormEvent) => {
     e.preventDefault();
     if (!namaAcara || !tanggalAcara) return alert("Isi nama acara dan tanggal kegiatan!");
@@ -191,8 +227,29 @@ export default function PortalTU() {
     setDetailAcara("");
   };
 
-  // Filter Data Berdasarkan Pencarian Siswa & Tahun Ajaran
-  const filteredPPDB = daftarPPDB.filter((s) => s.namaAnak?.toLowerCase().includes(searchQuery.toLowerCase()) || s.nikAnak?.includes(searchQuery));
+  // Filter Data
+  const filteredPPDB = daftarPPDB.filter((s) => {
+    const matchTA = !s.tahunAjaran || s.tahunAjaran === tahunAjaran;
+    const matchQuery = !searchQuery || s.namaAnak?.toLowerCase().includes(searchQuery.toLowerCase()) || s.nikAnak?.includes(searchQuery);
+    return matchTA && matchQuery;
+  });
+
+  const filteredPembayaran = daftarPembayaran.filter((p) => {
+    const matchTA = !p.tahunAjaran || p.tahunAjaran === tahunAjaran;
+    const matchQuery = !searchQuery || p.namaAnak?.toLowerCase().includes(searchQuery.toLowerCase()) || p.wali?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchTA && matchQuery;
+  });
+
+  // Filter Siswa untuk Tagihan & Info WA
+  const listSiswaTagihanFiltered = filteredPPDB.filter((s) => {
+    if (filterKelasTagihan === "SEMUA") return true;
+    return s.kelasTarget === filterKelasTagihan;
+  });
+
+  const listSiswaInfoFiltered = filteredPPDB.filter((s) => {
+    if (filterKelasInfo === "SEMUA") return true;
+    return s.kelasTarget === filterKelasInfo;
+  });
 
   const hitungSaldoPerAnak = () => {
     const saldoMap: { [key: string]: number } = {};
@@ -228,7 +285,7 @@ export default function PortalTU() {
   return (
     <div className="min-h-screen bg-slate-100 p-4">
       <div className="max-w-4xl mx-auto space-y-4">
-        {/* Header Portal TU */}
+        {/* Header Portal TU & Pilihan Tahun Ajaran */}
         <div className="bg-orange-600 text-white p-4 rounded-2xl shadow-sm flex flex-wrap justify-between items-center gap-2">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain bg-white/10 p-1 rounded-full" />
@@ -237,23 +294,27 @@ export default function PortalTU() {
               <p className="text-xs text-orange-100">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</p>
             </div>
           </div>
+          
           <div className="flex items-center gap-2">
-            <select
-              value={tahunAjaran}
-              onChange={(e) => setTahunAjaran(e.target.value)}
-              className="bg-orange-700 text-white border border-orange-400 font-bold text-xs px-2.5 py-1 rounded-lg focus:outline-none"
-            >
-              <option value="2026/2027">T.A. 2026/2027</option>
-              <option value="2027/2028">T.A. 2027/2028</option>
-              <option value="2028/2029">T.A. 2028/2029</option>
-            </select>
-            <button onClick={() => setIsLoggedIn(false)} className="bg-orange-800 hover:bg-orange-900 px-3 py-1 rounded-lg text-xs font-semibold">Keluar</button>
+            <div className="flex items-center bg-orange-700/80 px-2.5 py-1 rounded-xl border border-orange-400">
+              <span className="text-[11px] text-orange-100 mr-2 font-semibold">Tahun Ajaran:</span>
+              <select
+                value={tahunAjaran}
+                onChange={(e) => handleTAChange(e.target.value)}
+                className="bg-orange-900 text-white font-bold text-xs px-2 py-1 rounded-lg focus:outline-none border border-orange-500 cursor-pointer"
+              >
+                {opsiTahunAjaran.map((ta) => (
+                  <option key={ta} value={ta}>T.A. {ta}</option>
+                ))}
+              </select>
+            </div>
+            <button onClick={() => setIsLoggedIn(false)} className="bg-orange-800 hover:bg-orange-900 px-3 py-1.5 rounded-lg text-xs font-semibold">Keluar</button>
           </div>
         </div>
 
-        {/* Baris Pencarian Siswa Cepat */}
+        {/* Pencarian Cepat Nama Siswa */}
         <div className="bg-white p-3 rounded-2xl shadow-sm border flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-600">🔍 Cari Siswa:</span>
+          <span className="text-xs font-bold text-slate-600">🔍 Cari Siswa ({tahunAjaran}):</span>
           <input
             type="text"
             placeholder="Ketik Nama Siswa atau NIK..."
@@ -280,11 +341,12 @@ export default function PortalTU() {
         {activeTab === "ppdb" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
-              <h2 className="text-sm font-bold text-slate-800">Verifikasi Pendaftaran PPDB Masuk</h2>
+              <h2 className="text-sm font-bold text-slate-800">Verifikasi PPDB Masuk (T.A. {tahunAjaran})</h2>
               <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full">T.A. {tahunAjaran}</span>
             </div>
+
             {filteredPPDB.length === 0 ? (
-              <div className="text-xs text-slate-500 bg-slate-50 p-8 rounded-xl text-center">Belum ada data pendaftar baru PPDB.</div>
+              <div className="text-xs text-slate-500 bg-slate-50 p-8 rounded-xl text-center">Belum ada data pendaftar baru untuk Tahun Ajaran {tahunAjaran}.</div>
             ) : (
               <div className="space-y-3">
                 {filteredPPDB.map((siswa, i) => (
@@ -302,9 +364,8 @@ export default function PortalTU() {
                       <span className={`font-bold text-[10px] px-2.5 py-0.5 rounded-full uppercase ${siswa.status?.includes("AKTIF") ? "bg-emerald-100 text-emerald-800" : siswa.status?.includes("DITERIMA") ? "bg-sky-100 text-sky-800" : siswa.status?.includes("PINDAH") ? "bg-slate-200 text-slate-700" : siswa.status?.includes("LULUS") ? "bg-purple-100 text-purple-800" : "bg-amber-100 text-amber-800"}`}>{siswa.status}</span>
                     </div>
 
-                    {/* Tombol Kontrol Status Siswa & Cetak Form */}
                     <div className="flex flex-wrap gap-1.5 pt-2 border-t text-xs">
-                      <button onClick={() => handleDownloadFormPPDB(siswa)} className="bg-slate-700 text-white font-semibold px-3 py-1.5 rounded-lg text-[11px] flex items-center gap-1">
+                      <button onClick={() => handleDownloadFormPPDB(siswa)} className="bg-slate-700 text-white font-semibold px-3 py-1.5 rounded-lg text-[11px]">
                         📄 Cetak / Download Form PPDB (PDF)
                       </button>
                       <button onClick={() => handleUpdateStatusSiswa(i, "DITERIMA (DP 50%)")} className="bg-sky-600 text-white font-semibold px-2.5 py-1.5 rounded-lg text-[11px]">
@@ -334,28 +395,32 @@ export default function PortalTU() {
               <h2 className="text-sm font-bold text-slate-800">Laporan Bukti Pembayaran Masuk (SPP, Pendaftaran, Kegiatan)</h2>
               <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full">T.A. {tahunAjaran}</span>
             </div>
-            {daftarPembayaran.length === 0 ? (
-              <div className="text-xs text-slate-500 bg-slate-50 p-8 rounded-xl text-center">Belum ada bukti upload konfirmasi pembayaran masuk dari Wali Murid.</div>
+
+            {filteredPembayaran.length === 0 ? (
+              <div className="text-xs text-slate-500 bg-slate-50 p-8 rounded-xl text-center">Belum ada bukti upload pembayaran masuk untuk T.A. {tahunAjaran}.</div>
             ) : (
               <div className="space-y-3">
-                {daftarPembayaran.map((p, i) => (
+                {filteredPembayaran.map((p, i) => (
                   <div key={i} className="p-4 border rounded-xl space-y-2 bg-slate-50 flex flex-wrap justify-between items-center">
                     <div>
                       <p className="font-bold text-slate-800 text-xs">{p.jenis} - Wali: {p.wali}</p>
                       <p className="text-xs text-slate-600">Siswa Target: <strong>{p.namaAnak}</strong></p>
-                      <p className="text-[10px] text-slate-500">{p.tanggal} | Total: <strong className="text-emerald-700">Rp {Number(p.nominal).toLocaleString("id-ID")}</strong></p>
+                      <p className="text-[10px] text-slate-500">{p.tanggal} | Nominal: <strong className="text-emerald-700">Rp {Number(p.nominal).toLocaleString("id-ID")}</strong></p>
                     </div>
 
-                    {p.status === "verified" ? (
-                      <span className="bg-emerald-100 text-emerald-800 font-bold text-xs px-3 py-1 rounded-full">✓ Kuitansi Terbit</span>
-                    ) : (
-                      <button
-                        onClick={() => handleVerifikasiBayar(i)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition"
-                      >
-                        ✓ Cek Bukti & Terbitkan Kuitansi
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => handleLihatBukti(p.buktiUrl)} className="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-3 py-2 rounded-xl transition">
+                        🖼️ Lihat / Unduh Bukti Bayar
                       </button>
-                    )}
+
+                      {p.status === "verified" ? (
+                        <span className="bg-emerald-100 text-emerald-800 font-bold text-xs px-3 py-1 rounded-full">✓ Kuitansi Terbit</span>
+                      ) : (
+                        <button onClick={() => handleVerifikasiBayar(i)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-2 rounded-xl transition">
+                          ✓ Cek Bukti & Terbitkan Kuitansi
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -389,7 +454,7 @@ export default function PortalTU() {
           </div>
         )}
 
-        {/* Tab 4: Unduh Dokumen e-Rapor PAUD (PDF) */}
+        {/* Tab 4: Unduh e-Rapor PAUD (PDF) */}
         {activeTab === "rapor" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -404,8 +469,8 @@ export default function PortalTU() {
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">📄</span>
                   <div>
-                    <h4 className="font-bold text-xs text-emerald-950">Dokumen e-Rapor PAUD Digital</h4>
-                    <p className="text-[10px] text-slate-500">Format PDF - Siap Diunduh / Dicetak untuk Arsip TU</p>
+                    <h4 className="font-bold text-xs text-emerald-950">Dokumen e-Rapor PAUD Digital (T.A. {tahunAjaran})</h4>
+                    <p className="text-[10px] text-slate-500">Format PDF - Siap Diunduh untuk Arsip TU</p>
                   </div>
                 </div>
                 <a href={raporUrl} download="Arsip-eRapor-TU.pdf" className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2 rounded-xl">
@@ -416,7 +481,7 @@ export default function PortalTU() {
           </div>
         )}
 
-        {/* Tab 5: Buat & Kirim Tagihan WA */}
+        {/* Tab 5: Buat Tagihan WA dengan Filter Kelas A & Kelas B */}
         {activeTab === "tagihan" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -425,14 +490,39 @@ export default function PortalTU() {
             </div>
 
             <form onSubmit={handleKirimTagihanWA} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Siswa Target</label>
-                <select value={siswaTargetTagihan} onChange={(e) => setSiswaTargetTagihan(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required>
-                  <option value="">-- Pilih Siswa --</option>
-                  {daftarPPDB.map((s, i) => (
-                    <option key={i} value={s.namaAnak}>{s.namaAnak} (Wali: {s.namaWali})</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Filter Kelompok Kelas</label>
+                  <select
+                    value={filterKelasTagihan}
+                    onChange={(e) => {
+                      setFilterKelasTagihan(e.target.value);
+                      setSiswaTargetTagihan("");
+                    }}
+                    className="w-full px-3 py-2 border rounded-lg text-xs bg-slate-50 font-bold"
+                  >
+                    <option value="SEMUA">-- Tampilkan Semua Kelas --</option>
+                    <option value="Kelas A">Kelompok Kelas A</option>
+                    <option value="Kelas B">Kelompok Kelas B</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Siswa Target ({tahunAjaran})</label>
+                  <select
+                    value={siswaTargetTagihan}
+                    onChange={(e) => setSiswaTargetTagihan(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg text-xs"
+                    required
+                  >
+                    <option value="">-- Pilih Siswa ({listSiswaTagihanFiltered.length} Siswa) --</option>
+                    {listSiswaTagihanFiltered.map((s, i) => (
+                      <option key={i} value={s.namaAnak}>
+                        {s.namaAnak} ({s.kelasTarget}) - Wali: {s.namaWali}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -462,7 +552,7 @@ export default function PortalTU() {
           </div>
         )}
 
-        {/* Tab 6: Info WA Kegiatan Sekolah */}
+        {/* Tab 6: Info WA Kegiatan dengan Filter Kelas A & Kelas B */}
         {activeTab === "wa" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -471,14 +561,34 @@ export default function PortalTU() {
             </div>
 
             <form onSubmit={handleKirimInfoWA} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Wali Murid Penerima</label>
-                <select value={waliTargetWA} onChange={(e) => setWaliTargetWA(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs">
-                  <option value="">-- Semua Wali Murid / Pilih Spesifik --</option>
-                  {daftarPPDB.map((s, i) => (
-                    <option key={i} value={s.namaAnak}>Wali dari {s.namaAnak} ({s.namaWali})</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Filter Kelompok Kelas Target</label>
+                  <select
+                    value={filterKelasInfo}
+                    onChange={(e) => {
+                      setFilterKelasInfo(e.target.value);
+                      setWaliTargetWA("");
+                    }}
+                    className="w-full px-3 py-2 border rounded-lg text-xs bg-slate-50 font-bold"
+                  >
+                    <option value="SEMUA">-- Tampilkan Semua Kelas --</option>
+                    <option value="Kelas A">Kelompok Kelas A</option>
+                    <option value="Kelas B">Kelompok Kelas B</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Wali Murid Penerima ({tahunAjaran})</label>
+                  <select value={waliTargetWA} onChange={(e) => setWaliTargetWA(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs">
+                    <option value="">-- Semua Wali Murid / Pilih Spesifik --</option>
+                    {listSiswaInfoFiltered.map((s, i) => (
+                      <option key={i} value={s.namaAnak}>
+                        Wali dari {s.namaAnak} ({s.kelasTarget}) - {s.namaWali}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
