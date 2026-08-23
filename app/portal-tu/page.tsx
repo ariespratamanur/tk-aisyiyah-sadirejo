@@ -21,6 +21,10 @@ export default function PortalTU() {
   const [filterKelasInfo, setFilterKelasInfo] = useState("SEMUA"); // "SEMUA", "Kelas A", "Kelas B"
   const [searchQuery, setSearchQuery] = useState("");
 
+  // State Pencarian Khusus Tabungan & e-Rapor
+  const [searchTabungan, setSearchTabungan] = useState("");
+  const [searchRapor, setSearchRapor] = useState("");
+
   const [activeTab, setActiveTab] = useState<"ppdb" | "laporan" | "tabungan" | "rapor" | "tagihan" | "wa">("ppdb");
 
   const [daftarPPDB, setDaftarPPDB] = useState<any[]>([]);
@@ -313,7 +317,7 @@ export default function PortalTU() {
           </div>
         </div>
 
-        {/* Pencarian Cepat Nama Siswa */}
+        {/* Pencarian Cepat Nama Siswa Global */}
         <div className="bg-white p-3 rounded-2xl shadow-sm border flex items-center gap-2">
           <span className="text-xs font-bold text-slate-600">🔍 Cari Siswa ({tahunAjaran}):</span>
           <input
@@ -389,7 +393,7 @@ export default function PortalTU() {
           </div>
         )}
 
-        {/* Tab 2: Laporan Uang Masuk dengan Tombol Unduh / Lihat Bukti Bayar */}
+        {/* Tab 2: Laporan Uang Masuk */}
         {activeTab === "laporan" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -432,7 +436,7 @@ export default function PortalTU() {
           </div>
         )}
 
-        {/* Tab 3: Saldo Tabungan */}
+        {/* Tab 3: Saldo Tabungan (DILENGKAPI KOLOM PENCARIAN) */}
         {activeTab === "tabungan" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -440,25 +444,42 @@ export default function PortalTU() {
               <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full">T.A. {tahunAjaran}</span>
             </div>
 
+            {/* Input Pencarian Nama Siswa Tabungan */}
+            <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border">
+              <span className="text-xs font-bold text-slate-600">🔎 Cari Nama Siswa:</span>
+              <input
+                type="text"
+                placeholder="Ketik Nama Siswa Tabungan..."
+                value={searchTabungan}
+                onChange={(e) => setSearchTabungan(e.target.value)}
+                className="flex-1 px-3 py-1.5 border rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+              />
+              {searchTabungan && (
+                <button onClick={() => setSearchTabungan("")} className="text-xs text-rose-600 font-bold px-2">Clear</button>
+              )}
+            </div>
+
             {Object.keys(hitungSaldoPerAnak()).length === 0 ? (
               <div className="text-xs text-slate-500 bg-slate-50 p-8 rounded-xl text-center">Belum ada data mutasi tabungan siswa.</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {Object.entries(hitungSaldoPerAnak()).map(([nama, saldo], idx) => (
-                  <div key={idx} className="p-3.5 border rounded-xl bg-slate-50 flex justify-between items-center">
-                    <div>
-                      <p className="font-bold text-slate-800 text-xs">👤 {nama}</p>
-                      <p className="text-[10px] text-slate-500">Saldo Tabungan Aktif</p>
+                {Object.entries(hitungSaldoPerAnak())
+                  .filter(([nama]) => nama.toLowerCase().includes(searchTabungan.toLowerCase()))
+                  .map(([nama, saldo], idx) => (
+                    <div key={idx} className="p-3.5 border rounded-xl bg-slate-50 flex justify-between items-center">
+                      <div>
+                        <p className="font-bold text-slate-800 text-xs">👤 {nama}</p>
+                        <p className="text-[10px] text-slate-500">Saldo Tabungan Aktif</p>
+                      </div>
+                      <span className="font-bold text-emerald-800 text-sm">Rp {saldo.toLocaleString("id-ID")}</span>
                     </div>
-                    <span className="font-bold text-emerald-800 text-sm">Rp {saldo.toLocaleString("id-ID")}</span>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </div>
         )}
 
-        {/* Tab 4: Unduh e-Rapor */}
+        {/* Tab 4: Unduh e-Rapor (DILENGKAPI KOLOM PENCARIAN) */}
         {activeTab === "rapor" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -466,10 +487,25 @@ export default function PortalTU() {
               <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-full">T.A. {tahunAjaran}</span>
             </div>
 
+            {/* Input Pencarian Nama Siswa e-Rapor */}
+            <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border">
+              <span className="text-xs font-bold text-slate-600">🔎 Cari Nama Siswa:</span>
+              <input
+                type="text"
+                placeholder="Ketik Nama Siswa e-Rapor..."
+                value={searchRapor}
+                onChange={(e) => setSearchRapor(e.target.value)}
+                className="flex-1 px-3 py-1.5 border rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-orange-500"
+              />
+              {searchRapor && (
+                <button onClick={() => setSearchRapor("")} className="text-xs text-rose-600 font-bold px-2">Clear</button>
+              )}
+            </div>
+
             {!raporUrl ? (
               <div className="text-xs text-slate-500 bg-slate-50 p-8 rounded-xl text-center">Belum ada file e-Rapor yang diunggah oleh Guru Kelas.</div>
             ) : (
-              <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-xl flex justify-between items-center">
+              <div className="p-5 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-wrap justify-between items-center gap-3">
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">📄</span>
                   <div>
@@ -485,7 +521,7 @@ export default function PortalTU() {
           </div>
         )}
 
-        {/* Tab 5: Buat Tagihan WA dengan Filter Terpisah Kelas A & Kelas B */}
+        {/* Tab 5: Buat Tagihan WA */}
         {activeTab === "tagihan" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -494,7 +530,6 @@ export default function PortalTU() {
             </div>
 
             <form onSubmit={handleKirimTagihanWA} className="space-y-3">
-              {/* Filter Terpisah Kelas A & Kelas B */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">1. Filter Kelompok Kelas Siswa</label>
                 <div className="flex gap-2">
@@ -575,7 +610,7 @@ export default function PortalTU() {
           </div>
         )}
 
-        {/* Tab 6: Info WA Kegiatan dengan Filter Terpisah Kelas A & Kelas B */}
+        {/* Tab 6: Info WA Kegiatan */}
         {activeTab === "wa" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
