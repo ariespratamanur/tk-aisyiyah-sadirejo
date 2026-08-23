@@ -1,233 +1,185 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://tncvbyhgsjtoswlyxcrl.supabase.co";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function PortalWali() {
   const TENANT_ID = "aba-sadirejo";
 
-  const [isWaliLoggedIn, setIsWaliLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [waWali, setWaWali] = useState("");
   const [namaWaliInput, setNamaWaliInput] = useState("");
-  const [noWaInput, setNoWaInput] = useState("");
 
-  const [activeTab, setActiveTab] = useState<
-    "kartu" | "spp" | "infaq" | "jurnal" | "tabungan" | "rapor" | "ppdb" | "belajar"
-  >("kartu");
+  const [activeTab, setActiveTab] = useState<"kartu" | "bayar" | "infaq" | "jurnal" | "tabungan" | "rapor" | "ppdb">("kartu");
 
   const [dataSiswa, setDataSiswa] = useState<any>(null);
-  const [jurnalSiswa, setJurnalSiswa] = useState<any[]>([]);
-  const [tabunganSiswa, setTabunganSiswa] = useState<any[]>([]);
-  const [kuitansiList, setKuitansiList] = useState<any[]>([]);
+  const [riwayatBayar, setRiwayatBayar] = useState<any[]>([]);
+  const [riwayatJurnal, setRiwayatJurnal] = useState<any[]>([]);
+  const [saldoTabunganTotal, setSaldoTabunganTotal] = useState(0);
+  const [fileRaporUrl, setFileRaporUrl] = useState<string | null>(null);
 
-  // Form PPDB Lengkap
-  const [namaAnak, setNamaAnak] = useState("");
-  const [nikAnak, setNikAnak] = useState("");
-  const [jenisKelamin, setJenisKelamin] = useState("Laki-laki");
-  const [kelasTarget, setKelasTarget] = useState("Kelas A");
-  const [tempatLahir, setTempatLahir] = useState("");
-  const [tanggalLahir, setTanggalLahir] = useState("");
-  const [alamat, setAlamat] = useState("");
-  const [namaAyah, setNamaAyah] = useState("");
-  const [pekerjaanAyah, setPekerjaanAyah] = useState("");
-  const [namaIbu, setNamaIbu] = useState("");
-  const [pekerjaanIbu, setPekerjaanIbu] = useState("");
+  const [formPpdb, setFormPpdb] = useState({
+    namaAnak: "",
+    nikAnak: "",
+    kelasTarget: "Kelas A",
+    tempatLahir: "",
+    tanggalLahir: "",
+    alamat: "",
+    namaAyah: "",
+    pekerjaanAyah: "",
+    namaIbu: "",
+    pekerjaanIbu: "",
+  });
 
-  // Bayar Biaya
-  const [jenisBiaya, setJenisBiaya] = useState("SPP Bulanan");
-  const [nominalBiaya, setNominalBiaya] = useState("150000");
-  const [buktiFile, setBuktiFile] = useState<string | null>(null);
+  const [jenisBayar, setJenisBayar] = useState("SPP Bulanan");
+  const [nominalBayar, setNominalBayar] = useState("");
+  const [buktiBayarUrl, setBuktiBayarUrl] = useState("");
+  const [pesanInfaq, setPesanInfaq] = useState("");
 
-  useEffect(() => {
-    const savedNamaWali = localStorage.getItem("wali_nama");
-    const savedWaWali = localStorage.getItem("wali_wa");
-    if (savedNamaWali && savedWaWali) {
-      setNamaWaliInput(savedNamaWali);
-      setNoWaInput(savedWaWali);
-      setIsWaliLoggedIn(true);
-    }
-  }, []);
+  const syncDataWali = async () => {
+    if (!waWali) return;
 
-  const syncDataFromSupabase = async () => {
-    if (!noWaInput) return;
+    const { data: siswa } = await supabase
+      .from("siswa")
+      .select("*")
+      .eq("tenant_id", TENANT_ID)
+      .eq("wa_wali", waWali)
+      .single();
 
-    try {
-      const { data: siswaData } = await supabase
-        .from("siswa")
+    if (siswa) {
+      setDataSiswa(siswa);
+
+      const { data: bayar } = await supabase
+        .from("pembayaran")
         .select("*")
         .eq("tenant_id", TENANT_ID)
-        .eq("wa_wali", noWaInput)
-        .maybeSingle();
+        .eq("nama_anak", siswa.nama_anak)
+        .order("created_at", { ascending: false });
 
-      if (siswaData) {
-        setDataSiswa({
-          id: siswaData.id,
-          namaAnak: siswaData.nama_anak,
-          nikAnak: siswaData.nik_anak,
-          jenisKelamin: siswaData.jenis_kelamin || "Laki-laki",
-          kelasTarget: siswaData.kelas_target,
-          status: siswaData.status,
-          tahunAjaran: siswaData.tahun_ajaran,
+      if (bayar) setRiwayatBayar(bayar);
+
+      const { data: jurnal } = await supabase
+        .from("jurnal")
+        .select("*")
+        .eq("tenant_id", TENANT_ID)
+        .eq("nama_anak", siswa.nama_anak)
+        .order("created_at", { ascending: false });
+
+      if (jurnal) setRiwayatJurnal(jurnal);
+
+      const { data: tabungan } = await supabase
+        .from("tabungan")
+        .select("*")
+        .eq("tenant_id", TENANT_ID)
+        .eq("nama_anak", siswa.nama_anak);
+
+      if (tabungan) {
+        let total = 0;
+        tabungan.forEach((t: any) => {
+          if (t.jenis === "setor") total += Number(t.nominal);
+          else total -= Number(t.nominal);
         });
-
-        const { data: jurnalData } = await supabase
-          .from("jurnal")
-          .select("*")
-          .eq("tenant_id", TENANT_ID)
-          .eq("nama_anak", siswaData.nama_anak)
-          .order("tanggal", { ascending: false });
-
-        if (jurnalData) setJurnalSiswa(jurnalData);
-
-        const { data: tabunganData } = await supabase
-          .from("tabungan")
-          .select("*")
-          .eq("tenant_id", TENANT_ID)
-          .eq("nama_anak", siswaData.nama_anak)
-          .order("tanggal", { ascending: false });
-
-        if (tabunganData) setTabunganSiswa(tabunganData);
-
-        const { data: bayarData } = await supabase
-          .from("pembayaran")
-          .select("*")
-          .eq("tenant_id", TENANT_ID)
-          .eq("nama_anak", siswaData.nama_anak)
-          .eq("status", "verified")
-          .order("created_at", { ascending: false });
-
-        if (bayarData) {
-          setKuitansiList(
-            bayarData.map((k: any) => ({
-              id: k.id,
-              jenis: k.jenis,
-              nominal: k.nominal,
-              tanggal: new Date(k.created_at).toLocaleDateString("id-ID"),
-              pesan: `Assalamu'alaikum Wr. Wb. Terima kasih Bunda/Ayah ${k.wali} telah melakukan pembayaran ${k.jenis} sebesar Rp ${Number(k.nominal).toLocaleString("id-ID")}. Pembayaran telah resmi diterima oleh Tata Usaha. Jazakumullah Khairan Katsiran.`,
-            }))
-          );
-        }
+        setSaldoTabunganTotal(total);
       }
-    } catch (e) {
-      console.log(e);
+
+      const { data: rapor } = await supabase
+        .from("rapor")
+        .select("*")
+        .eq("tenant_id", TENANT_ID)
+        .eq("nama_anak", siswa.nama_anak)
+        .single();
+
+      if (rapor) setFileRaporUrl(rapor.file_url);
     }
   };
 
   useEffect(() => {
-    syncDataFromSupabase();
-    const interval = setInterval(syncDataFromSupabase, 3000);
+    syncDataWali();
+    const interval = setInterval(syncDataWali, 3000);
     return () => clearInterval(interval);
-  }, [isWaliLoggedIn, noWaInput]);
+  }, [waWali, isLoggedIn]);
 
-  const handleWaliLogin = (e: React.FormEvent) => {
+  const handleSubmitPPDB = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (namaWaliInput && noWaInput) {
-      localStorage.setItem("wali_nama", namaWaliInput);
-      localStorage.setItem("wali_wa", noWaInput);
-      setIsWaliLoggedIn(true);
-    } else {
-      alert("Harap isi Nama Wali dan Nomor WhatsApp terlebih dahulu!");
-    }
-  };
-
-  const handleWaliLogout = () => {
-    localStorage.removeItem("wali_nama");
-    localStorage.removeItem("wali_wa");
-    setIsWaliLoggedIn(false);
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setBuktiFile(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handlePPDBSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const taAktif = localStorage.getItem("selected_ta") || "2026/2027";
+    if (!formPpdb.namaAnak || !formPpdb.nikAnak) return alert("Lengkapi nama dan NIK anak!");
 
     const { error } = await supabase.from("siswa").insert([
       {
         tenant_id: TENANT_ID,
-        nama_anak: namaAnak,
-        nik_anak: nikAnak,
-        jenis_kelamin: jenisKelamin,
-        kelas_target: kelasTarget,
-        tahun_ajaran: taAktif,
+        nama_anak: formPpdb.namaAnak,
+        nik_anak: formPpdb.nikAnak,
+        kelas_target: formPpdb.kelasTarget,
+        tempat_lahir: formPpdb.tempatLahir,
+        tanggal_lahir: formPpdb.tanggalLahir,
+        alamat: formPpdb.alamat,
         nama_wali: namaWaliInput,
-        wa_wali: noWaInput,
+        wa_wali: waWali,
+        nama_ayah: formPpdb.namaAyah,
+        pekerjaan_ayah: formPpdb.pekerjaanAyah,
+        nama_ibu: formPpdb.namaIbu,
+        pekerjaan_ibu: formPpdb.pekerjaanIbu,
         status: "TERDAFTAR (Menunggu Pembayaran / Verifikasi TU)",
       },
     ]);
 
     if (!error) {
-      alert("Formulir PPDB berhasil dikirim dan tersimpan di Supabase Cloud!");
+      alert("Formulir PPDB Berhasil Dikirim! Silakan lakukan pembayaran pendaftaran.");
+      syncDataWali();
       setActiveTab("kartu");
-      syncDataFromSupabase();
-    } else {
-      alert("Gagal mengirim data PPDB: " + error.message);
     }
   };
 
-  const handleConfirmPembayaran = async () => {
-    if (!buktiFile) return alert("Harap unggah foto bukti pembayaran terlebih dahulu!");
-
-    const taAktif = localStorage.getItem("selected_ta") || "2026/2027";
-    const totalMasuk = Number(nominalBiaya) + 2000;
+  const handleKirimPembayaran = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dataSiswa) return alert("Data siswa tidak ditemukan! Selesaikan pendaftaran PPDB dulu.");
 
     const { error } = await supabase.from("pembayaran").insert([
       {
         tenant_id: TENANT_ID,
-        nama_anak: dataSiswa?.namaAnak || "Calon Siswa",
-        wali: namaWaliInput,
-        jenis: jenisBiaya,
-        nominal: totalMasuk,
-        bukti_url: buktiFile,
+        nama_anak: dataSiswa.nama_anak,
+        wali: waWali,
+        jenis: jenisBayar,
+        nominal: Number(nominalBayar),
+        bukti_url: buktiBayarUrl || "https://via.placeholder.com/150",
         status: "pending",
-        tahun_ajaran: taAktif,
       },
     ]);
 
     if (!error) {
-      alert("Bukti pembayaran berhasil terkirim ke Supabase Cloud & Portal TU!");
-    } else {
-      alert("Gagal mengirim bukti pembayaran: " + error.message);
+      alert("Konfirmasi pembayaran terkirim ke TU! Menunggu verifikasi Kuitansi.");
+      setNominalBayar("");
+      setBuktiBayarUrl("");
+      syncDataWali();
     }
   };
 
-  const hitungTotalSaldo = () => {
-    return tabunganSiswa.reduce((acc, curr) => (curr.jenis === "setor" ? acc + Number(curr.nominal) : acc - Number(curr.nominal)), 0);
+  const handleKirimInfaq = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPesanInfaq("Assalamualaikum, terima kasih Bunda/Ayah sudah berinfaq hari ini. Semoga kebaikan kita diterima Allah Subhanahu wa Ta'ala, jazakallah khairan.");
   };
 
-  if (!isWaliLoggedIn) {
+  if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
-        <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md border border-slate-200">
-          <div className="bg-emerald-800 text-white p-4 rounded-xl text-center mb-6 space-y-2">
-            <img src="/logo.png" alt="Logo" className="w-12 h-12 mx-auto object-contain bg-white/10 p-1 rounded-full" />
-            <div>
-              <h1 className="font-bold text-lg">Masuk Portal Wali Murid</h1>
-              <p className="text-xs text-emerald-100">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</p>
-            </div>
+        <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md border">
+          <div className="bg-teal-700 text-white p-4 rounded-xl text-center mb-6">
+            <h1 className="font-bold text-lg">Login Portal Wali Murid</h1>
+            <p className="text-xs text-teal-100">TK 'Aisyiyah Bustanul Athfal Sadirejo</p>
           </div>
-          <form onSubmit={handleWaliLogin} className="space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); setIsLoggedIn(true); }} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Nama Wali Murid / Orang Tua *</label>
-              <input type="text" placeholder="Masukkan Nama Lengkap Anda" value={namaWaliInput} onChange={(e) => setNamaWaliInput(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap Wali</label>
+              <input type="text" placeholder="Masukkan Nama Wali" value={namaWaliInput} onChange={(e) => setNamaWaliInput(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" required />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Nomor WhatsApp Aktif *</label>
-              <input type="tel" placeholder="Contoh: 08123456789" value={noWaInput} onChange={(e) => setNoWaInput(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Nomor WhatsApp Wali</label>
+              <input type="text" placeholder="Contoh: 08123456789" value={waWali} onChange={(e) => setWaWali(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-sm" required />
             </div>
-            <button type="submit" className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg text-xs">Masuk Portal Wali Murid</button>
-            <div className="text-center pt-2"><Link href="/" className="text-xs text-slate-500 hover:underline">Kembali ke Beranda</Link></div>
+            <button type="submit" className="w-full bg-teal-700 hover:bg-teal-800 text-white font-semibold py-2.5 rounded-lg text-sm">Masuk Portal Wali</button>
           </form>
         </div>
       </div>
@@ -235,218 +187,174 @@ export default function PortalWali() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4">
+    <div className="min-h-screen bg-slate-100 p-4 pb-12">
       <div className="max-w-3xl mx-auto space-y-4">
-        {/* Header */}
-        <div className="bg-emerald-800 text-white p-4 rounded-2xl shadow-sm flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Logo" className="w-10 h-10 object-contain bg-white/10 p-1 rounded-full" />
-            <div>
-              <h1 className="font-bold text-base">Portal Wali Murid</h1>
-              <p className="text-xs text-emerald-100">Selamat Datang, <strong>{namaWaliInput}</strong> ({noWaInput})</p>
-            </div>
+        <div className="bg-teal-800 text-white p-4 rounded-2xl flex justify-between items-center shadow">
+          <div>
+            <h1 className="font-bold text-base">Portal Wali Murid</h1>
+            <p className="text-xs text-teal-100">Selamat Datang, {namaWaliInput} ({waWali})</p>
           </div>
-          <button onClick={handleWaliLogout} className="bg-emerald-900 hover:bg-emerald-950 px-3 py-1.5 rounded-lg text-xs font-semibold">Keluar</button>
+          <button onClick={() => setIsLoggedIn(false)} className="bg-teal-900 px-3 py-1.5 rounded-lg text-xs font-semibold">Keluar</button>
         </div>
 
-        {/* Tab Navigasi */}
-        <div className="bg-white p-2 rounded-2xl shadow-sm border flex flex-wrap gap-1">
-          <button onClick={() => setActiveTab("kartu")} className={`flex-1 min-w-[80px] py-2 text-xs font-semibold rounded-xl ${activeTab === "kartu" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}>🪪 Kartu</button>
-          <button onClick={() => setActiveTab("belajar")} className={`flex-1 min-w-[80px] py-2 text-xs font-semibold rounded-xl ${activeTab === "belajar" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}>📖 Belajar</button>
-          <button onClick={() => setActiveTab("spp")} className={`flex-1 min-w-[80px] py-2 text-xs font-semibold rounded-xl ${activeTab === "spp" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}>💳 Bayar</button>
-          <button onClick={() => setActiveTab("infaq")} className={`flex-1 min-w-[80px] py-2 text-xs font-semibold rounded-xl ${activeTab === "infaq" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}>🕌 Infaq</button>
-          <button onClick={() => setActiveTab("jurnal")} className={`flex-1 min-w-[80px] py-2 text-xs font-semibold rounded-xl ${activeTab === "jurnal" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}>📖 Jurnal</button>
-          <button onClick={() => setActiveTab("tabungan")} className={`flex-1 min-w-[80px] py-2 text-xs font-semibold rounded-xl ${activeTab === "tabungan" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}>💰 Tabungan</button>
-          <button onClick={() => setActiveTab("rapor")} className={`flex-1 min-w-[80px] py-2 text-xs font-semibold rounded-xl ${activeTab === "rapor" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}>📁 e-Rapor</button>
-          <button onClick={() => setActiveTab("ppdb")} className={`flex-1 min-w-[80px] py-2 text-xs font-semibold rounded-xl ${activeTab === "ppdb" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-slate-50"}`}>📄 PPDB</button>
+        <div className="bg-white p-2 rounded-2xl border shadow-sm flex flex-wrap gap-1">
+          <button onClick={() => setActiveTab("kartu")} className={`flex-1 min-w-[70px] py-2 text-xs font-bold rounded-xl ${activeTab === "kartu" ? "bg-teal-700 text-white" : "text-slate-600"}`}>🪪 Kartu</button>
+          <button onClick={() => setActiveTab("ppdb")} className={`flex-1 min-w-[70px] py-2 text-xs font-bold rounded-xl ${activeTab === "ppdb" ? "bg-teal-700 text-white" : "text-slate-600"}`}>📄 PPDB</button>
+          <button onClick={() => setActiveTab("bayar")} className={`flex-1 min-w-[70px] py-2 text-xs font-bold rounded-xl ${activeTab === "bayar" ? "bg-teal-700 text-white" : "text-slate-600"}`}>💳 Bayar</button>
+          <button onClick={() => setActiveTab("infaq")} className={`flex-1 min-w-[70px] py-2 text-xs font-bold rounded-xl ${activeTab === "infaq" ? "bg-teal-700 text-white" : "text-slate-600"}`}>🎁 Infaq</button>
+          <button onClick={() => setActiveTab("jurnal")} className={`flex-1 min-w-[70px] py-2 text-xs font-bold rounded-xl ${activeTab === "jurnal" ? "bg-teal-700 text-white" : "text-slate-600"}`}>📖 Jurnal</button>
+          <button onClick={() => setActiveTab("tabungan")} className={`flex-1 min-w-[70px] py-2 text-xs font-bold rounded-xl ${activeTab === "tabungan" ? "bg-teal-700 text-white" : "text-slate-600"}`}>💰 Tabungan</button>
+          <button onClick={() => setActiveTab("rapor")} className={`flex-1 min-w-[70px] py-2 text-xs font-bold rounded-xl ${activeTab === "rapor" ? "bg-teal-700 text-white" : "text-slate-600"}`}>📂 e-Rapor</button>
         </div>
 
-        {/* Tab 1: Kartu Siswa */}
         {activeTab === "kartu" && (
-          <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-            <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Kartu Siswa Digital & Status PPDB</h2>
-            {!dataSiswa ? (
-              <div className="bg-slate-50 border p-8 rounded-2xl text-center space-y-3">
-                <span className="text-3xl">🪪</span>
-                <h3 className="font-bold text-sm text-slate-700">Belum Ada Data Siswa Terdaftar</h3>
-                <button onClick={() => setActiveTab("ppdb")} className="bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl">+ Isi Form PPDB Online</button>
+          <div className="bg-white p-5 rounded-2xl border shadow-sm space-y-4">
+            <h2 className="text-sm font-bold text-slate-800">Kartu Siswa Digital & Status Akademik Real-Time</h2>
+            {dataSiswa ? (
+              <div className="bg-gradient-to-r from-teal-800 to-emerald-900 text-white p-5 rounded-2xl shadow-md space-y-3">
+                <div className="flex justify-between items-center border-b border-teal-600 pb-2">
+                  <span className="font-bold text-xs tracking-wide">TK 'AISYIYAH SADIREJO</span>
+                  <span className="text-[10px] bg-teal-700 px-2 py-0.5 rounded-full font-semibold">T.A. 2026/2027</span>
+                </div>
+                <div>
+                  <p className="text-[10px] text-teal-200 uppercase font-semibold">Nama Siswa</p>
+                  <p className="font-bold text-sm md:text-base">{dataSiswa.nama_anak}</p>
+                  <p className="text-xs text-teal-100">Target: {dataSiswa.kelas_target} | NIK: {dataSiswa.nik_anak}</p>
+                </div>
+                <div className="pt-2">
+                  <p className="text-[10px] text-teal-200 uppercase font-semibold mb-1">Status Pendaftaran / Akademik:</p>
+                  <span className="inline-block bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+                    {dataSiswa.status}
+                  </span>
+                </div>
               </div>
             ) : (
-              <div className="space-y-4">
-                <div className="bg-gradient-to-br from-emerald-800 to-emerald-950 text-white p-5 rounded-2xl shadow-md space-y-4 border border-emerald-700">
-                  <div className="flex justify-between items-start border-b border-emerald-600/50 pb-3">
-                    <div className="flex items-center gap-2">
-                      <img src="/logo.png" alt="Logo" className="w-9 h-9 object-contain bg-white/20 p-1 rounded-full" />
-                      <div>
-                        <h3 className="font-bold text-xs uppercase">TK 'AISYIYAH BUSTANUL ATHFAL</h3>
-                        <p className="text-[10px] text-emerald-200">SADIREJO - KARTU DIGITAL SISWA</p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] bg-emerald-700 text-emerald-100 font-bold px-2 py-0.5 rounded-full border border-emerald-500">T.A. {dataSiswa.tahunAjaran || "2026/2027"}</span>
-                  </div>
-
-                  <div className="flex justify-between items-center pt-1">
-                    <div>
-                      <p className="text-[10px] text-emerald-300 font-semibold uppercase">NAMA SISWA</p>
-                      <p className="text-base font-bold text-white">{dataSiswa.namaAnak} ({dataSiswa.jenisKelamin})</p>
-                      <p className="text-[11px] text-emerald-200 mt-1">Target Kelompok: <strong>{dataSiswa.kelasTarget}</strong> | NIK: {dataSiswa.nikAnak}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] text-emerald-300 font-semibold uppercase mb-1">STATUS AKADEMIK</p>
-                      <span className="bg-emerald-400 text-emerald-950 text-xs font-bold px-3 py-1 rounded-full shadow-sm">{dataSiswa.status}</span>
-                    </div>
-                  </div>
-                </div>
+              <div className="text-center py-6 text-xs text-slate-500">
+                Belum ada data pendaftaran. Silakan isi form pada tab <b>PPDB</b>.
               </div>
             )}
           </div>
         )}
 
-        {/* Tab 2: Belajar Online */}
-        {activeTab === "belajar" && (
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4 text-center">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center mx-auto text-3xl font-bold">🚀</div>
-            <div className="space-y-1">
-              <span className="bg-amber-100 text-amber-800 font-bold text-[10px] px-3 py-1 rounded-full uppercase tracking-wider">Pengembangan Modul</span>
-              <h2 className="text-lg font-bold text-slate-800 pt-2">Fitur Belajar Online (E-Learning)</h2>
-              <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">Materi pembelajaran interaktif, video, dan tugas harian dari <strong>Tim PT</strong> sedang disiapkan dan akan segera diunggah di modul ini.</p>
+        {activeTab === "ppdb" && (
+          <form onSubmit={handleSubmitPPDB} className="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+            <h2 className="text-sm font-bold text-slate-800">Formulir Pendaftaran Siswa Baru (PPDB)</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input type="text" placeholder="Nama Lengkap Anak" value={formPpdb.namaAnak} onChange={(e) => setFormPpdb({ ...formPpdb, namaAnak: e.target.value })} className="p-2 border rounded-xl text-xs" required />
+              <input type="text" placeholder="16 Digit NIK Anak" value={formPpdb.nikAnak} onChange={(e) => setFormPpdb({ ...formPpdb, nikAnak: e.target.value })} className="p-2 border rounded-xl text-xs" required />
+              <select value={formPpdb.kelasTarget} onChange={(e) => setFormPpdb({ ...formPpdb, kelasTarget: e.target.value })} className="p-2 border rounded-xl text-xs">
+                <option value="Kelas A">Kelas A</option>
+                <option value="Kelas B">Kelas B</option>
+              </select>
+              <input type="text" placeholder="Tempat Lahir" value={formPpdb.tempatLahir} onChange={(e) => setFormPpdb({ ...formPpdb, tempatLahir: e.target.value })} className="p-2 border rounded-xl text-xs" />
+              <input type="date" value={formPpdb.tanggalLahir} onChange={(e) => setFormPpdb({ ...formPpdb, tanggalLahir: e.target.value })} className="p-2 border rounded-xl text-xs" />
+              <input type="text" placeholder="Alamat Domisili" value={formPpdb.alamat} onChange={(e) => setFormPpdb({ ...formPpdb, alamat: e.target.value })} className="p-2 border rounded-xl text-xs" />
+              <input type="text" placeholder="Nama Ayah" value={formPpdb.namaAyah} onChange={(e) => setFormPpdb({ ...formPpdb, namaAyah: e.target.value })} className="p-2 border rounded-xl text-xs" />
+              <input type="text" placeholder="Pekerjaan Ayah" value={formPpdb.pekerjaanAyah} onChange={(e) => setFormPpdb({ ...formPpdb, pekerjaanAyah: e.target.value })} className="p-2 border rounded-xl text-xs" />
+              <input type="text" placeholder="Nama Ibu" value={formPpdb.namaIbu} onChange={(e) => setFormPpdb({ ...formPpdb, namaIbu: e.target.value })} className="p-2 border rounded-xl text-xs" />
+              <input type="text" placeholder="Pekerjaan Ibu" value={formPpdb.pekerjaanIbu} onChange={(e) => setFormPpdb({ ...formPpdb, pekerjaanIbu: e.target.value })} className="p-2 border rounded-xl text-xs" />
             </div>
-            <div className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl text-xs text-slate-400 font-semibold">✨ STATUS: COMING SOON / SEGERA HADIR ✨</div>
-          </div>
+            <button type="submit" className="w-full bg-teal-700 hover:bg-teal-800 text-white py-2.5 rounded-xl text-xs font-bold shadow">
+              🚀 Kirim Formulir Pendaftaran PPDB
+            </button>
+          </form>
         )}
 
-        {/* Tab 3: Bayar Biaya & Upload Bukti */}
-        {activeTab === "spp" && (
-          <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
-            <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Pembayaran Biaya Sekolah & Upload Bukti Bayar</h2>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Jenis Biaya</label>
-                <select value={jenisBiaya} onChange={(e) => setJenisBiaya(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs">
-                  <option value="SPP Bulanan">SPP Bulanan</option>
-                  <option value="Biaya Pendaftaran DP 50%">Biaya Pendaftaran (DP 50%)</option>
-                  <option value="Pelunasan Pendaftaran 100%">Biaya Pendaftaran (Pelunasan 100%)</option>
-                </select>
-              </div>
+        {activeTab === "bayar" && (
+          <div className="space-y-4">
+            <form onSubmit={handleKirimPembayaran} className="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+              <h2 className="text-sm font-bold text-slate-800">Pembayaran (SPP, Pendaftaran, & Kegiatan)</h2>
+              <select value={jenisBayar} onChange={(e) => setJenisBayar(e.target.value)} className="w-full p-2 border rounded-xl text-xs bg-white">
+                <option value="SPP Bulanan">SPP Bulanan</option>
+                <option value="Biaya Pendaftaran">Biaya Pendaftaran (Bisa Dicicil 2x 50%)</option>
+                <option value="Biaya Kegiatan">Biaya Kegiatan Sekolah</option>
+              </select>
+              <input type="number" placeholder="Nominal Bayar Rp" value={nominalBayar} onChange={(e) => setNominalBayar(e.target.value)} className="w-full p-2 border rounded-xl text-xs" required />
+              <input type="text" placeholder="Link Bukti Transfer (URL)" value={buktiBayarUrl} onChange={(e) => setBuktiBayarUrl(e.target.value)} className="w-full p-2 border rounded-xl text-xs" />
+              <button type="submit" className="w-full bg-teal-700 hover:bg-teal-800 text-white py-2.5 rounded-xl text-xs font-bold shadow">
+                📤 Kirim Konfirmasi Pembayaran
+              </button>
+            </form>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Nominal Biaya (Rp)</label>
-                <input type="text" value={nominalBiaya} onChange={(e) => setNominalBiaya(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs font-bold" />
-              </div>
+            <div className="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+              <h2 className="text-sm font-bold text-slate-800">Riwayat & Bukti Kuitansi Resmi</h2>
+              {riwayatBayar.map((b) => (
+                <div key={b.id} className="p-4 border rounded-xl bg-slate-50 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-xs">{b.jenis}</p>
+                      <p className="text-xs text-emerald-700 font-bold">Rp {Number(b.nominal).toLocaleString("id-ID")}</p>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${b.status === "verified" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+                      {b.status === "verified" ? "✓ Verified" : "Menunggu Verifikasi TU"}
+                    </span>
+                  </div>
 
-              <div className="space-y-2 pt-2 border-t">
-                <label className="block text-xs font-semibold text-slate-700">Upload Bukti Transaksi (Struk / Screenshot) *</label>
-                <input type="file" accept="image/*" onChange={handleFileUpload} className="w-full text-xs p-2 border rounded-lg" required />
-              </div>
-
-              <button onClick={handleConfirmPembayaran} className="w-full bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-xs">Konfirmasi & Kirim Pembayaran</button>
-            </div>
-
-            <div className="pt-4 border-t space-y-3">
-              <h3 className="text-xs font-bold text-slate-800">🧾 Bukti Kuitansi Pembayaran Resmi:</h3>
-              {kuitansiList.map((k) => (
-                <div key={k.id} className="p-4 bg-emerald-50 border border-emerald-300 rounded-xl space-y-2 text-xs">
-                  <p className="font-bold text-emerald-900">{k.jenis} - Rp {Number(k.nominal).toLocaleString("id-ID")}</p>
-                  <p className="italic text-slate-700">{k.pesan}</p>
+                  {b.status === "verified" && (
+                    <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-xs text-emerald-900 space-y-1">
+                      <p className="font-bold">📜 KUITANSI RESMI SEKOLAH</p>
+                      <p>
+                        Assalamualaikum Wr. Wb. Terima kasih Bunda/Ayah telah melakukan pembayaran <b>{b.jenis}</b> sebesar <b>Rp {Number(b.nominal).toLocaleString("id-ID")}</b>.
+                      </p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Tab 5: Jurnal Harian */}
+        {activeTab === "infaq" && (
+          <form onSubmit={handleKirimInfaq} className="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+            <h2 className="text-sm font-bold text-slate-800">Setor Infaq Sekolah</h2>
+            <input type="number" placeholder="Nominal Infaq Rp" className="w-full p-2 border rounded-xl text-xs" required />
+            <button type="submit" className="w-full bg-teal-700 hover:bg-teal-800 text-white py-2.5 rounded-xl text-xs font-bold shadow">
+              🎁 Setor Infaq
+            </button>
+            {pesanInfaq && (
+              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl text-xs text-emerald-900 font-medium">
+                {pesanInfaq}
+              </div>
+            )}
+          </form>
+        )}
+
         {activeTab === "jurnal" && (
-          <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
-            <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Jurnal Harian Perkembangan Siswa (Input Guru)</h2>
-            {jurnalSiswa.map((j, idx) => (
-              <div key={idx} className="p-4 border rounded-xl bg-slate-50 space-y-2 text-xs">
-                <p className="font-bold text-emerald-800">📅 Tanggal: {j.tanggal}</p>
-                <ul className="list-disc list-inside text-slate-600 space-y-1">
-                  {Array.isArray(j.aktivitas) ? j.aktivitas.map((act: string, i: number) => <li key={i}>{act}</li>) : <li>{j.aktivitas}</li>}
-                </ul>
+          <div className="bg-white p-5 rounded-2xl border shadow-sm space-y-3">
+            <h2 className="text-sm font-bold text-slate-800">Jurnal Aktivitas Harian Anak (Inputan Guru)</h2>
+            {riwayatJurnal.map((j, i) => (
+              <div key={i} className="p-3 border rounded-xl bg-slate-50 space-y-1">
+                <p className="font-bold text-xs text-teal-800">{j.tanggal}</p>
+                <div className="flex flex-wrap gap-1">
+                  {j.aktivitas?.map((akt: string, idx: number) => (
+                    <span key={idx} className="bg-teal-100 text-teal-800 text-[10px] font-semibold px-2 py-0.5 rounded-md">
+                      ✓ {akt}
+                    </span>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Tab 6: Tabungan Siswa */}
         {activeTab === "tabungan" && (
-          <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
-            <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Buku Tabungan Digital Siswa</h2>
-            <div className="bg-emerald-800 text-white p-4 rounded-xl flex justify-between items-center">
-              <div>
-                <p className="text-[10px] font-bold text-emerald-200">TOTAL SALDO TABUNGAN AKTIF</p>
-                <p className="text-2xl font-bold">Rp {hitungTotalSaldo().toLocaleString("id-ID")}</p>
-              </div>
-              <span className="text-3xl">💰</span>
-            </div>
+          <div className="bg-white p-5 rounded-2xl border shadow-sm space-y-3 text-center py-6">
+            <h2 className="text-sm font-bold text-slate-800">Total Saldo Tabungan Siswa</h2>
+            <p className="text-2xl font-bold text-emerald-700">Rp {saldoTabunganTotal.toLocaleString("id-ID")}</p>
+            <p className="text-xs text-slate-400">Diakumulasi dari setoran harian yang dicatat oleh Guru Kelas.</p>
           </div>
         )}
 
-        {/* Tab 8: Form PPDB Online Lengkap dengan Pilihan Jenis Kelamin */}
-        {activeTab === "ppdb" && (
-          <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
-            <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Formulir Pendaftaran Siswa Baru (PPDB Online)</h2>
-            <form onSubmit={handlePPDBSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap Anak *</label>
-                <input type="text" placeholder="Masukkan nama lengkap anak" value={namaAnak} onChange={(e) => setNamaAnak(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">16 Digit NIK Anak *</label>
-                <input type="number" placeholder="Masukkan 16 digit NIK anak" value={nikAnak} onChange={(e) => setNikAnak(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-              </div>
-
-              {/* DROPDOWN JENIS KELAMIN & KELAS TARGET */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-bold text-emerald-800 mb-1">Jenis Kelamin *</label>
-                  <select value={jenisKelamin} onChange={(e) => setJenisKelamin(e.target.value)} className="w-full px-3 py-2 border-2 border-emerald-600 rounded-lg text-xs font-bold bg-white">
-                    <option value="Laki-laki">👦 Laki-laki</option>
-                    <option value="Perempuan">👧 Perempuan</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Kelompok Target *</label>
-                  <select value={kelasTarget} onChange={(e) => setKelasTarget(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs font-bold bg-white">
-                    <option value="Kelas A">Kelas A (4-5 Tahun)</option>
-                    <option value="Kelas B">Kelas B (5-6 Tahun)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tempat Lahir *</label>
-                  <input type="text" placeholder="Kota Lahir" value={tempatLahir} onChange={(e) => setTempatLahir(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tanggal Lahir *</label>
-                  <input type="date" value={tanggalLahir} onChange={(e) => setTanggalLahir(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Alamat Domisili Lengkap *</label>
-                <textarea placeholder="Tuliskan alamat lengkap rumah" value={alamat} onChange={(e) => setAlamat(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required></textarea>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <input type="text" placeholder="Nama Ayah" value={namaAyah} onChange={(e) => setNamaAyah(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-                <input type="text" placeholder="Pekerjaan Ayah" value={pekerjaanAyah} onChange={(e) => setPekerjaanAyah(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <input type="text" placeholder="Nama Ibu" value={namaIbu} onChange={(e) => setNamaIbu(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-                <input type="text" placeholder="Pekerjaan Ibu" value={pekerjaanIbu} onChange={(e) => setPekerjaanIbu(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-              </div>
-
-              <button type="submit" className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg text-xs transition">
-                Kirim Formulir PPDB Online
-              </button>
-            </form>
+        {activeTab === "rapor" && (
+          <div className="bg-white p-5 rounded-2xl border shadow-sm space-y-3 text-center py-6">
+            <h2 className="text-sm font-bold text-slate-800">Dokumen e-Rapor Perkembangan Anak</h2>
+            {fileRaporUrl ? (
+              <a href={fileRaporUrl} target="_blank" rel="noreferrer" className="inline-block bg-teal-700 text-white text-xs px-4 py-2 rounded-xl font-bold shadow">
+                📥 Unduh / Lihat File PDF e-Rapor
+              </a>
+            ) : (
+              <p className="text-xs text-slate-400">Dokumen e-Rapor semester ini belum di-upload oleh Guru Kelas.</p>
+            )}
           </div>
         )}
       </div>
