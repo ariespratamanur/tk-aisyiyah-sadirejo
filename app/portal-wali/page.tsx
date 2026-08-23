@@ -4,6 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 
 export default function PortalWali() {
+  // State Akses Login Wali Murid
+  const [isWaliLoggedIn, setIsWaliLoggedIn] = useState(false);
+  const [namaWaliInput, setNamaWaliInput] = useState("");
+  const [noWaInput, setNoWaInput] = useState("");
+
   const [activeTab, setActiveTab] = useState<"kartu" | "spp" | "infaq" | "jurnal" | "tabungan" | "ppdb">("kartu");
 
   // State Fitur Bayar SPP / Biaya Sekolah
@@ -12,13 +17,92 @@ export default function PortalWali() {
   const [metodeSPP, setMetodeSPP] = useState<"qris" | "transfer">("qris");
   const [sudahBayarSPP, setSudahBayarSPP] = useState(false);
 
-  // State Fitur Infaq Belajar
+  // State Fitur Infaq & ZIS
+  const [jenisInfaq, setJenisInfaq] = useState("Infaq");
+  const [totalHartaZakat, setTotalHartaZakat] = useState("");
   const [nominalInfaq, setNominalInfaq] = useState("");
   const [metodeInfaq, setMetodeInfaq] = useState<"qris" | "transfer">("qris");
   const [sudahBayarInfaq, setSudahBayarInfaq] = useState(false);
 
-  // Status Pendaftaran untuk Kartu Siswa Digital (Default: Terdaftar -> Diterima oleh TU)
-  const [statusSiswa] = useState<"terdaftar" | "diterima">("diterima"); // Bisa dinamis sesuai database TU
+  // Handle Login Wali
+  const handleWaliLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (namaWaliInput && noWaInput) {
+      setIsWaliLoggedIn(true);
+    } else {
+      alert("Harap isi Nama Wali dan Nomor WhatsApp!");
+    }
+  };
+
+  // Hitung Nominal Zakat Maal Otomatis (2.5%)
+  const handleHartaChange = (val: string) => {
+    setTotalHartaZakat(val);
+    const numeric = Number(val || 0);
+    if (numeric > 0) {
+      setNominalInfaq(Math.round(numeric * 0.025).toString());
+    } else {
+      setNominalInfaq("");
+    }
+  };
+
+  if (!isWaliLoggedIn) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+        <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md border border-slate-200">
+          <div className="bg-emerald-800 text-white p-4 rounded-xl text-center mb-6 space-y-2">
+            <img
+              src="/logo.png"
+              alt="Logo 'Aisyiyah"
+              className="w-12 h-12 mx-auto object-contain bg-white/10 p-1 rounded-full"
+            />
+            <div>
+              <h1 className="font-bold text-lg">Masuk Portal Wali Murid</h1>
+              <p className="text-xs text-emerald-100 mt-0.5">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleWaliLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Nama Wali Murid / Orang Tua</label>
+              <input
+                type="text"
+                placeholder="Masukkan Nama Lengkap Anda"
+                value={namaWaliInput}
+                onChange={(e) => setNamaWaliInput(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Nomor WhatsApp Aktif</label>
+              <input
+                type="tel"
+                placeholder="Contoh: 08123456789"
+                value={noWaInput}
+                onChange={(e) => setNoWaInput(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg text-sm transition"
+            >
+              Masuk Portal Wali Murid
+            </button>
+
+            <div className="text-center pt-2">
+              <Link href="/" className="text-xs text-slate-500 hover:underline">
+                Kembali ke Beranda
+              </Link>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 p-4">
@@ -33,15 +117,15 @@ export default function PortalWali() {
             />
             <div>
               <h1 className="font-bold text-base">Portal Wali Murid</h1>
-              <p className="text-xs text-emerald-100">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</p>
+              <p className="text-xs text-emerald-100">Selamat Datang, <strong>{namaWaliInput}</strong> ({noWaInput})</p>
             </div>
           </div>
-          <Link
-            href="/"
-            className="bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 rounded-lg text-xs font-semibold"
+          <button
+            onClick={() => setIsWaliLoggedIn(false)}
+            className="bg-emerald-900 hover:bg-emerald-950 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
           >
-            Kembali
-          </Link>
+            Keluar
+          </button>
         </div>
 
         {/* Tab Navigasi */}
@@ -68,7 +152,7 @@ export default function PortalWali() {
               activeTab === "infaq" ? "bg-emerald-700 text-white" : "text-slate-600 hover:bg-slate-50"
             }`}
           >
-            🕌 Infaq Belajar
+            🕌 Infaq & ZIS
           </button>
           <button
             onClick={() => setActiveTab("jurnal")}
@@ -96,45 +180,25 @@ export default function PortalWali() {
           </button>
         </div>
 
-        {/* Tab 1: Kartu Siswa Digital */}
+        {/* Tab 1: Kartu Siswa */}
         {activeTab === "kartu" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Kartu Siswa Digital Sekolah</h2>
-            <div className="bg-gradient-to-br from-emerald-800 to-emerald-950 text-white p-5 rounded-2xl shadow-md space-y-4 border border-emerald-700">
-              <div className="flex justify-between items-start border-b border-emerald-600/50 pb-3">
-                <div className="flex items-center gap-2">
-                  <img src="/logo.png" alt="Logo" className="w-9 h-9 object-contain bg-white/20 p-1 rounded-full" />
-                  <div>
-                    <h3 className="font-bold text-xs uppercase tracking-wide">TK 'AISYIYAH BUSTANUL ATHFAL</h3>
-                    <p className="text-[10px] text-emerald-200">SADIREJO - KARTU DIGITAL SISWA</p>
-                  </div>
-                </div>
-                <span className="text-[10px] bg-emerald-700/80 text-emerald-100 font-bold px-2 py-0.5 rounded-full border border-emerald-500">
-                  T.A. 2026/2027
-                </span>
+            
+            <div className="bg-slate-50 border border-slate-200 p-8 rounded-2xl text-center space-y-3">
+              <span className="text-3xl">🪪</span>
+              <div>
+                <h3 className="font-bold text-sm text-slate-700">Belum Ada Data Siswa Terdaftar</h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                  Anda belum memiliki siswa yang terdaftar aktif. Silakan isi **Formulir PPDB Online** terlebih dahulu untuk mendaftarkan putra/putri Anda.
+                </p>
               </div>
-
-              <div className="flex justify-between items-center pt-1">
-                <div className="space-y-1">
-                  <p className="text-[10px] text-emerald-300 font-semibold uppercase">NAMA SISWA</p>
-                  <p className="text-base font-bold text-white">Ananda Ahmad Fawwaz</p>
-                  <p className="text-[11px] text-emerald-200 mt-1">
-                    Kelompok / Kelas: <strong>Kelas A</strong>
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] text-emerald-300 font-semibold uppercase mb-1">STATUS PENDAFTARAN</p>
-                  {statusSiswa === "diterima" ? (
-                    <span className="bg-emerald-400 text-emerald-950 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-                      ✓ DITERIMA & AKTIF (2026/2027)
-                    </span>
-                  ) : (
-                    <span className="bg-amber-400 text-amber-950 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-                      ⏳ TERDAFTAR (Menunggu Pelunasan TU)
-                    </span>
-                  )}
-                </div>
-              </div>
+              <button
+                onClick={() => setActiveTab("ppdb")}
+                className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition"
+              >
+                + Isi Form PPDB Online
+              </button>
             </div>
           </div>
         )}
@@ -173,7 +237,6 @@ export default function PortalWali() {
                 />
               </div>
 
-              {/* Rincian Biaya Admin 2000 */}
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
                 <div className="flex justify-between text-slate-600">
                   <span>Nominal Biaya</span>
@@ -213,14 +276,12 @@ export default function PortalWali() {
                 </div>
               </div>
 
-              {/* Tampilan QRIS / Transfer */}
               {metodeSPP === "qris" ? (
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-2">
                   <p className="text-xs font-bold text-slate-700">QRIS RESMI TK 'AISYIYAH BUSTANUL ATHFAL</p>
                   <div className="w-40 h-40 mx-auto bg-white p-2 border border-slate-300 rounded-xl flex items-center justify-center">
                     <span className="text-xs text-slate-400 font-semibold">[ Barcode QRIS Sekolah ]</span>
                   </div>
-                  <p className="text-[11px] text-slate-500">Dapat di-scan melalui GoPay, OVO, Dana, ShopeePay, & Mobile Banking</p>
                 </div>
               ) : (
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-2">
@@ -233,7 +294,6 @@ export default function PortalWali() {
                 </div>
               )}
 
-              {/* Upload Bukti Pembayaran */}
               {!sudahBayarSPP ? (
                 <div className="space-y-2 pt-2 border-t">
                   <label className="block text-xs font-semibold text-slate-700">Upload Bukti Transaksi (Struk / Screenshot)</label>
@@ -251,33 +311,69 @@ export default function PortalWali() {
                   <p className="text-xs text-emerald-800">
                     <em>"Pembayaran SPP bulan Agustus 2026 sudah diterima. Jazakumullah Khairan"</em>
                   </p>
-                  <p className="text-[11px] text-slate-500">Kuitansi resmi fisik / cetak dapat diunduh di Portal TU atau diambil di kantor sekolah.</p>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* Tab 3: Infaq Belajar */}
+        {/* Tab 3: Infaq & ZIS */}
         {activeTab === "infaq" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-            <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Infaq Belajar & Kerelawanan Sekolah</h2>
+            <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Layanan Infaq, Sadaqah & Zakat</h2>
+            
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Nominal Infaq Belajar (Rp)</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Jenis Penyaluran</label>
+                <select
+                  value={jenisInfaq}
+                  onChange={(e) => {
+                    setJenisInfaq(e.target.value);
+                    setNominalInfaq("");
+                    setTotalHartaZakat("");
+                  }}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                >
+                  <option value="Infaq">Infaq</option>
+                  <option value="Sadaqah">Sadaqah</option>
+                  <option value="Zakat Fitri">Zakat Fitri</option>
+                  <option value="Zakat Maal">Zakat Maal (2.5% dari Harta)</option>
+                </select>
+              </div>
+
+              {/* Tampilan Khusus Zakat Maal */}
+              {jenisInfaq === "Zakat Maal" && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Total Nilai Harta / Tabungan (Rp)</label>
+                  <input
+                    type="number"
+                    placeholder="Contoh: 100000000"
+                    value={totalHartaZakat}
+                    onChange={(e) => handleHartaChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    *Kalkulator otomatis menghitung 2.5% dari total harta yang diinputkan.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Nominal {jenisInfaq} (Rp)
+                </label>
                 <input
                   type="number"
-                  placeholder="Contoh: 50000"
+                  placeholder="Masukkan nominal"
                   value={nominalInfaq}
                   onChange={(e) => setNominalInfaq(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold text-slate-800"
                 />
               </div>
 
-              {/* Rincian Admin 500 */}
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
                 <div className="flex justify-between text-slate-600">
-                  <span>Nominal Infaq</span>
+                  <span>Nominal {jenisInfaq}</span>
                   <span>Rp {Number(nominalInfaq || 0).toLocaleString("id-ID")}</span>
                 </div>
                 <div className="flex justify-between text-slate-600">
@@ -285,13 +381,13 @@ export default function PortalWali() {
                   <span>Rp 500</span>
                 </div>
                 <div className="flex justify-between font-bold text-emerald-800 border-t pt-1.5 mt-1">
-                  <span>Total Transfer</span>
+                  <span>Total Penyaluran</span>
                   <span>Rp {(Number(nominalInfaq || 0) + 500).toLocaleString("id-ID")}</span>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Metode Infaq</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Pilih Metode Pembayaran</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -300,7 +396,7 @@ export default function PortalWali() {
                       metodeInfaq === "qris" ? "bg-emerald-50 border-emerald-600 text-emerald-800" : "border-slate-200 text-slate-600"
                     }`}
                   >
-                    📱 Scan QRIS Infaq
+                    📱 Scan QRIS
                   </button>
                   <button
                     type="button"
@@ -316,9 +412,9 @@ export default function PortalWali() {
 
               {metodeInfaq === "qris" ? (
                 <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-center space-y-2">
-                  <p className="text-xs font-bold text-slate-700">QRIS INFAQ TK 'AISYIYAH SADIREJO</p>
+                  <p className="text-xs font-bold text-slate-700">QRIS RESMI PENYALURAN TK 'AISYIYAH SADIREJO</p>
                   <div className="w-36 h-36 mx-auto bg-white p-2 border border-slate-300 rounded-xl flex items-center justify-center">
-                    <span className="text-xs text-slate-400 font-semibold">[ Barcode QRIS Infaq ]</span>
+                    <span className="text-xs text-slate-400 font-semibold">[ Barcode QRIS ]</span>
                   </div>
                 </div>
               ) : (
@@ -331,18 +427,18 @@ export default function PortalWali() {
 
               {!sudahBayarInfaq ? (
                 <div className="space-y-2 pt-2 border-t">
-                  <label className="block text-xs font-semibold text-slate-700">Upload Bukti Infaq</label>
+                  <label className="block text-xs font-semibold text-slate-700">Upload Bukti Transaksi</label>
                   <input type="file" accept="image/*" className="w-full text-xs p-2 border border-slate-300 rounded-lg" />
                   <button
                     onClick={() => setSudahBayarInfaq(true)}
                     className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg text-xs transition"
                   >
-                    Kirim Infaq Belajar
+                    Kirim {jenisInfaq}
                   </button>
                 </div>
               ) : (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 font-bold">
-                  ✓ Infaq berhasil dikirim. Jazakumullah Khairan atas dukungan Bapak/Ibu untuk kegiatan belajar siswa.
+                  ✓ Penyaluran {jenisInfaq} berhasil dikirim. Jazakumullah Khairan atas kedermawanan Bapak/Ibu.
                 </div>
               )}
             </div>
@@ -376,7 +472,7 @@ export default function PortalWali() {
           </div>
         )}
 
-        {/* Tab 6: Form PPDB Online Lengkap */}
+        {/* Tab 6: Form PPDB Online */}
         {activeTab === "ppdb" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Formulir Pendaftaran Siswa Baru (PPDB Online)</h2>
@@ -435,6 +531,16 @@ export default function PortalWali() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Alamat Lengkap (Domisili Tempat Tinggal)</label>
+                <textarea
+                  rows={2}
+                  placeholder="Jalan, Desa/Kelurahan, Kecamatan, Dusun/RT/RW..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                  required
+                ></textarea>
+              </div>
+
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Ayah Kandung</label>
@@ -481,6 +587,7 @@ export default function PortalWali() {
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Nomor WhatsApp Wali / Kontak Aktif</label>
                 <input
                   type="tel"
+                  defaultValue={noWaInput}
                   placeholder="Contoh: 08123456789"
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                   required
