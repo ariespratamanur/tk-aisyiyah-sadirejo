@@ -41,7 +41,7 @@ export default function PortalGuruPage() {
   const [keteranganTabungan, setKeteranganTabungan] = useState('');
   const [tabunganHistory, setTabunganHistory] = useState<any[]>([]);
 
-  // State Form Rapor RDM
+  // State Form e-Rapor PAUD
   const [raporFile, setRaporFile] = useState<File | null>(null);
 
   useEffect(() => {
@@ -202,7 +202,7 @@ export default function PortalGuruPage() {
       <header className="bg-emerald-800 text-white p-4 rounded-2xl shadow mb-4 max-w-xl mx-auto flex justify-between items-center">
         <div>
           <h1 className="text-sm font-bold">Portal Guru Kelas</h1>
-          <p className="text-[10px] text-emerald-200">RA PERMATA HATI</p>
+          <p className="text-[10px] text-emerald-200">TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO</p>
         </div>
         <Link href="/login" className="text-xs bg-emerald-900 hover:bg-emerald-950 text-white px-3 py-1.5 rounded-lg">
           Kembali
