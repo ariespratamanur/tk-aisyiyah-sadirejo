@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { supabase } from "@/supabase";
+import { createClient } from "@supabase/supabase-js";
+
+// Inisialisasi Supabase SDK langsung di dalam file agar aman dari masalah path
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://tncvbyhgsjtoswlyxcrl.supabase.co";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function PortalWali() {
   const TENANT_ID = "aba-sadirejo";
@@ -50,69 +55,69 @@ export default function PortalWali() {
     }
   }, []);
 
-  // Sync Real-Time Data dari Supabase Cloud
+  // Sync Data dari Supabase Cloud
   const syncDataFromSupabase = async () => {
     if (!noWaInput) return;
 
-    // 1. Fetch Data Siswa
-    const { data: siswaData } = await supabase
-      .from("siswa")
-      .select("*")
-      .eq("tenant_id", TENANT_ID)
-      .eq("wa_wali", noWaInput)
-      .maybeSingle();
-
-    if (siswaData) {
-      setDataSiswa({
-        id: siswaData.id,
-        namaAnak: siswaData.nama_anak,
-        nikAnak: siswaData.nik_anak,
-        jenisKelamin: siswaData.jenis_kelamin || "Laki-laki",
-        kelasTarget: siswaData.kelas_target,
-        status: siswaData.status,
-        tahunAjaran: siswaData.tahun_ajaran,
-      });
-
-      // 2. Fetch Jurnal
-      const { data: jurnalData } = await supabase
-        .from("jurnal")
+    try {
+      const { data: siswaData } = await supabase
+        .from("siswa")
         .select("*")
         .eq("tenant_id", TENANT_ID)
-        .eq("nama_anak", siswaData.nama_anak)
-        .order("tanggal", { ascending: false });
+        .eq("wa_wali", noWaInput)
+        .maybeSingle();
 
-      if (jurnalData) setJurnalSiswa(jurnalData);
+      if (siswaData) {
+        setDataSiswa({
+          id: siswaData.id,
+          namaAnak: siswaData.nama_anak,
+          nikAnak: siswaData.nik_anak,
+          jenisKelamin: siswaData.jenis_kelamin || "Laki-laki",
+          kelasTarget: siswaData.kelas_target,
+          status: siswaData.status,
+          tahunAjaran: siswaData.tahun_ajaran,
+        });
 
-      // 3. Fetch Tabungan
-      const { data: tabunganData } = await supabase
-        .from("tabungan")
-        .select("*")
-        .eq("tenant_id", TENANT_ID)
-        .eq("nama_anak", siswaData.nama_anak)
-        .order("tanggal", { ascending: false });
+        const { data: jurnalData } = await supabase
+          .from("jurnal")
+          .select("*")
+          .eq("tenant_id", TENANT_ID)
+          .eq("nama_anak", siswaData.nama_anak)
+          .order("tanggal", { ascending: false });
 
-      if (tabunganData) setTabunganSiswa(tabunganData);
+        if (jurnalData) setJurnalSiswa(jurnalData);
 
-      // 4. Fetch Kuitansi Pembayaran Verified
-      const { data: bayarData } = await supabase
-        .from("pembayaran")
-        .select("*")
-        .eq("tenant_id", TENANT_ID)
-        .eq("nama_anak", siswaData.nama_anak)
-        .eq("status", "verified")
-        .order("created_at", { ascending: false });
+        const { data: tabunganData } = await supabase
+          .from("tabungan")
+          .select("*")
+          .eq("tenant_id", TENANT_ID)
+          .eq("nama_anak", siswaData.nama_anak)
+          .order("tanggal", { ascending: false });
 
-      if (bayarData) {
-        setKuitansiList(
-          bayarData.map((k: any) => ({
-            id: k.id,
-            jenis: k.jenis,
-            nominal: k.nominal,
-            tanggal: new Date(k.created_at).toLocaleDateString("id-ID"),
-            pesan: `Assalamu'alaikum Wr. Wb. Terima kasih Bunda/Ayah ${k.wali} telah melakukan pembayaran ${k.jenis} sebesar Rp ${Number(k.nominal).toLocaleString("id-ID")}. Pembayaran telah resmi diterima oleh Tata Usaha. Jazakumullah Khairan Katsiran.`,
-          }))
-        );
+        if (tabunganData) setTabunganSiswa(tabunganData);
+
+        const { data: bayarData } = await supabase
+          .from("pembayaran")
+          .select("*")
+          .eq("tenant_id", TENANT_ID)
+          .eq("nama_anak", siswaData.nama_anak)
+          .eq("status", "verified")
+          .order("created_at", { ascending: false });
+
+        if (bayarData) {
+          setKuitansiList(
+            bayarData.map((k: any) => ({
+              id: k.id,
+              jenis: k.jenis,
+              nominal: k.nominal,
+              tanggal: new Date(k.created_at).toLocaleDateString("id-ID"),
+              pesan: `Assalamu'alaikum Wr. Wb. Terima kasih Bunda/Ayah ${k.wali} telah melakukan pembayaran ${k.jenis} sebesar Rp ${Number(k.nominal).toLocaleString("id-ID")}. Pembayaran telah resmi diterima oleh Tata Usaha. Jazakumullah Khairan Katsiran.`,
+            }))
+          );
+        }
       }
+    } catch (e) {
+      console.log(e);
     }
   };
 
@@ -148,7 +153,7 @@ export default function PortalWali() {
     }
   };
 
-  // Submit PPDB ke Supabase (Termasuk Jenis Kelamin & Detail Lengkap)
+  // Submit PPDB ke Supabase
   const handlePPDBSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const taAktif = localStorage.getItem("selected_ta") || "2026/2027";
@@ -176,7 +181,6 @@ export default function PortalWali() {
     }
   };
 
-  // Confirm Pembayaran ke Supabase
   const handleConfirmPembayaran = async () => {
     if (!buktiFile) return alert("Harap unggah foto bukti pembayaran terlebih dahulu!");
 
@@ -385,7 +389,7 @@ export default function PortalWali() {
           </div>
         )}
 
-        {/* Tab 8: Form PPDB Online Lengkap dengan Dropdown Jenis Kelamin */}
+        {/* Tab 8: Form PPDB Online Lengkap dengan Pilihan Jenis Kelamin */}
         {activeTab === "ppdb" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Formulir Pendaftaran Siswa Baru (PPDB Online)</h2>
@@ -400,17 +404,18 @@ export default function PortalWali() {
                 <input type="number" placeholder="Masukkan 16 digit NIK anak" value={nikAnak} onChange={(e) => setNikAnak(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
               </div>
 
+              {/* DROPDOWN JENIS KELAMIN & KELAS TARGET */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Jenis Kelamin *</label>
-                  <select value={jenisKelamin} onChange={(e) => setJenisKelamin(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs font-bold bg-white">
+                  <label className="block text-xs font-bold text-emerald-800 mb-1">Jenis Kelamin *</label>
+                  <select value={jenisKelamin} onChange={(e) => setJenisKelamin(e.target.value)} className="w-full px-3 py-2 border-2 border-emerald-600 rounded-lg text-xs font-bold bg-white">
                     <option value="Laki-laki">👦 Laki-laki</option>
                     <option value="Perempuan">👧 Perempuan</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Kelompok Target *</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Kelompok Target *</label>
                   <select value={kelasTarget} onChange={(e) => setKelasTarget(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs font-bold bg-white">
                     <option value="Kelas A">Kelas A (4-5 Tahun)</option>
                     <option value="Kelas B">Kelas B (5-6 Tahun)</option>
