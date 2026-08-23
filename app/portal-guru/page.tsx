@@ -11,6 +11,11 @@ export default function PortalGuru() {
   const [newPassword, setNewPassword] = useState("");
   const [activeTab, setActiveTab] = useState<"jurnal" | "tabungan" | "rapor">("jurnal");
 
+  // State Fitur Tabungan
+  const [jenisTransaksi, setJenisTransaksi] = useState<"setor" | "tarik">("setor");
+  const [nominal, setNominal] = useState("");
+  const [keterangan, setKeterangan] = useState("");
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (nbm && password) {
@@ -89,7 +94,7 @@ export default function PortalGuru() {
             </form>
           ) : (
             <form onSubmit={handleChangePassword} className="space-y-4">
-              <h2 className="text-sm font-bold text-slate-800 mb-2">Ubah Password Baru</h2>
+              <h2 className="text-sm font-bold text-slate-800 mb-2">Ubah Password Guru</h2>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">NBM</label>
                 <input
@@ -124,7 +129,7 @@ export default function PortalGuru() {
                 onClick={() => setShowChangePassword(false)}
                 className="w-full text-center text-xs text-slate-500 hover:underline mt-2"
               >
-                Kembali ke Form Login
+                Batal / Kembali ke Login
               </button>
             </form>
           )}
@@ -145,16 +150,48 @@ export default function PortalGuru() {
           </div>
           <div className="flex gap-2">
             <button
+              onClick={() => setShowChangePassword(true)}
+              className="bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 rounded-lg text-xs font-semibold"
+            >
+              Ubah Password
+            </button>
+            <button
               onClick={() => setIsLoggedIn(false)}
               className="bg-emerald-900 hover:bg-emerald-950 px-3 py-1.5 rounded-lg text-xs font-semibold"
             >
               Keluar
             </button>
-            <Link href="/" className="bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 rounded-lg text-xs font-semibold">
-              Kembali
-            </Link>
           </div>
         </div>
+
+        {/* Modal Pop-up Ubah Password (jika diklik dari dalam Dashboard) */}
+        {showChangePassword && (
+          <div className="bg-white p-4 rounded-2xl shadow-md border border-slate-200">
+            <h2 className="text-sm font-bold text-slate-800 mb-3">Ubah Password Akun Guru</h2>
+            <form onSubmit={handleChangePassword} className="space-y-3">
+              <input
+                type="password"
+                placeholder="Masukkan Password Baru"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                required
+              />
+              <div className="flex gap-2">
+                <button type="submit" className="bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold">
+                  Simpan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowChangePassword(false)}
+                  className="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold"
+                >
+                  Batal
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Filter Siswa & Tab Navigasi */}
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-4">
@@ -201,7 +238,7 @@ export default function PortalGuru() {
           </div>
         </div>
 
-        {/* Konten Berdasarkan Tab */}
+        {/* Tab 1: Jurnal */}
         {activeTab === "jurnal" && (
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Input Aktivitas Harian Siswa</h2>
@@ -230,6 +267,70 @@ export default function PortalGuru() {
           </div>
         )}
 
+        {/* Tab 2: Tabungan */}
+        {activeTab === "tabungan" && (
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+            <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Pencatatan Tabungan Siswa</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Jenis Transaksi</label>
+                <select
+                  value={jenisTransaksi}
+                  onChange={(e) => setJenisTransaksi(e.target.value as "setor" | "tarik")}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                >
+                  <option value="setor">Setor Tabungan (+)</option>
+                  <option value="tarik">Tarik Tabungan (-)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Nominal (Rp)</label>
+                <input
+                  type="number"
+                  placeholder="Contoh: 10000"
+                  value={nominal}
+                  onChange={(e) => setNominal(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Keterangan / Catatan</label>
+              <input
+                type="text"
+                placeholder="Contoh: Tabungan harian"
+                value={keterangan}
+                onChange={(e) => setKeterangan(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              />
+            </div>
+
+            <button
+              onClick={() => {
+                if (!nominal) return alert("Masukkan nominal transaksi!");
+                alert("Transaksi tabungan berhasil dicatat!");
+                setNominal("");
+                setKeterangan("");
+              }}
+              className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg text-xs transition"
+            >
+              Simpan Transaksi Tabungan
+            </button>
+
+            {/* Riwayat Mutasi Singkat */}
+            <div className="pt-3 border-t border-slate-100">
+              <h3 className="text-xs font-bold text-slate-700 mb-2">Riwayat Tabungan Siswa</h3>
+              <div className="text-xs text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-200 text-center">
+                Belum ada transaksi tabungan yang tercatat.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: e-Rapor PAUD */}
         {activeTab === "rapor" && (
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 space-y-3">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Upload e-Rapor PAUD (File PDF)</h2>
