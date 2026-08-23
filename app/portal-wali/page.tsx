@@ -1,30 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 export default function PortalWali() {
-  // State Akses Login Wali Murid
   const [isWaliLoggedIn, setIsWaliLoggedIn] = useState(false);
   const [namaWaliInput, setNamaWaliInput] = useState("");
   const [noWaInput, setNoWaInput] = useState("");
 
   const [activeTab, setActiveTab] = useState<"kartu" | "spp" | "infaq" | "jurnal" | "tabungan" | "ppdb">("kartu");
 
-  // State Fitur Bayar SPP / Biaya Sekolah
+  // State Form PPDB Online
+  const [namaAnak, setNamaAnak] = useState("");
+  const [nikAnak, setNikAnak] = useState("");
+  const [kelasTarget, setKelasTarget] = useState("Kelas A");
+  const [tempatLahir, setTempatLahir] = useState("");
+  const [tanggalLahir, setTanggalLahir] = useState("");
+  const [alamat, setAlamat] = useState("");
+  const [namaAyah, setNamaAyah] = useState("");
+  const [pekerjaanAyah, setPekerjaanAyah] = useState("");
+  const [namaIbu, setNamaIbu] = useState("");
+  const [pekerjaanIbu, setPekerjaanIbu] = useState("");
+
+  // State Data Siswa Terdaftar (Diambil dari Storage)
+  const [dataSiswa, setDataSiswa] = useState<any>(null);
+
+  // State Pembayaran & ZIS
   const [jenisBiaya, setJenisBiaya] = useState("SPP Bulanan");
   const [nominalBiaya, setNominalBiaya] = useState("150000");
   const [metodeSPP, setMetodeSPP] = useState<"qris" | "transfer">("qris");
   const [sudahBayarSPP, setSudahBayarSPP] = useState(false);
 
-  // State Fitur Infaq & ZIS (Lazismu)
   const [jenisInfaq, setJenisInfaq] = useState("Infaq");
   const [totalHartaZakat, setTotalHartaZakat] = useState("");
   const [nominalInfaq, setNominalInfaq] = useState("");
   const [metodeInfaq, setMetodeInfaq] = useState<"qris" | "transfer">("qris");
   const [sudahBayarInfaq, setSudahBayarInfaq] = useState(false);
 
-  // Handle Login Wali
+  // Load Data Siswa & Status saat Halaman Dibuka
+  useEffect(() => {
+    const savedData = localStorage.getItem("ppdb_data_siswa");
+    if (savedData) {
+      setDataSiswa(JSON.parse(savedData));
+    }
+  }, []);
+
   const handleWaliLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (namaWaliInput && noWaInput) {
@@ -34,7 +54,6 @@ export default function PortalWali() {
     }
   };
 
-  // Hitung Nominal Zakat Maal Otomatis (2.5%)
   const handleHartaChange = (val: string) => {
     setTotalHartaZakat(val);
     const numeric = Number(val || 0);
@@ -43,6 +62,39 @@ export default function PortalWali() {
     } else {
       setNominalInfaq("");
     }
+  };
+
+  // Submit Form PPDB (Simpan Data Secara Realtime)
+  const handlePPDBSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newStudent = {
+      namaAnak,
+      nikAnak,
+      kelasTarget,
+      tempatLahir,
+      tanggalLahir,
+      alamat,
+      namaAyah,
+      pekerjaanAyah,
+      namaIbu,
+      pekerjaanIbu,
+      namaWali: namaWaliInput,
+      waWali: noWaInput,
+      status: "TERDAFTAR (Menunggu Verifikasi TU)",
+      tanggalDaftar: new Date().toLocaleDateString("id-ID"),
+    };
+
+    // Simpan ke database lokal
+    localStorage.setItem("ppdb_data_siswa", JSON.stringify(newStudent));
+    
+    // Simpan ke daftar antrean TU
+    const existingTU = JSON.parse(localStorage.getItem("tu_daftar_ppdb") || "[]");
+    existingTU.push(newStudent);
+    localStorage.setItem("tu_daftar_ppdb", JSON.stringify(existingTU));
+
+    setDataSiswa(newStudent);
+    alert("Pendaftaran PPDB Berhasil! Data Anda telah tersimpan dan Kartu Siswa Digital telah terbit.");
+    setActiveTab("kartu");
   };
 
   if (!isWaliLoggedIn) {
@@ -180,26 +232,59 @@ export default function PortalWali() {
           </button>
         </div>
 
-        {/* Tab 1: Kartu Siswa */}
+        {/* Tab 1: Kartu Siswa Digital */}
         {activeTab === "kartu" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Kartu Siswa Digital Sekolah</h2>
             
-            <div className="bg-slate-50 border border-slate-200 p-8 rounded-2xl text-center space-y-3">
-              <span className="text-3xl">🪪</span>
-              <div>
-                <h3 className="font-bold text-sm text-slate-700">Belum Ada Data Siswa Terdaftar</h3>
-                <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                  Anda belum memiliki siswa yang terdaftar aktif. Silakan isi **Formulir PPDB Online** terlebih dahulu untuk mendaftarkan putra/putri Anda.
-                </p>
+            {!dataSiswa ? (
+              <div className="bg-slate-50 border border-slate-200 p-8 rounded-2xl text-center space-y-3">
+                <span className="text-3xl">🪪</span>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-700">Belum Ada Data Siswa Terdaftar</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                    Anda belum memiliki siswa yang terdaftar aktif. Silakan isi **Formulir PPDB Online** terlebih dahulu untuk mendaftarkan putra/putri Anda.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab("ppdb")}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition"
+                >
+                  + Isi Form PPDB Online
+                </button>
               </div>
-              <button
-                onClick={() => setActiveTab("ppdb")}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-4 py-2 rounded-xl transition"
-              >
-                + Isi Form PPDB Online
-              </button>
-            </div>
+            ) : (
+              <div className="bg-gradient-to-br from-emerald-800 to-emerald-950 text-white p-5 rounded-2xl shadow-md space-y-4 border border-emerald-700">
+                <div className="flex justify-between items-start border-b border-emerald-600/50 pb-3">
+                  <div className="flex items-center gap-2">
+                    <img src="/logo.png" alt="Logo" className="w-9 h-9 object-contain bg-white/20 p-1 rounded-full" />
+                    <div>
+                      <h3 className="font-bold text-xs uppercase tracking-wide">TK 'AISYIYAH BUSTANUL ATHFAL</h3>
+                      <p className="text-[10px] text-emerald-200">SADIREJO - KARTU DIGITAL SISWA</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] bg-emerald-700/80 text-emerald-100 font-bold px-2 py-0.5 rounded-full border border-emerald-500">
+                    T.A. 2026/2027
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center pt-1">
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-emerald-300 font-semibold uppercase">NAMA SISWA</p>
+                    <p className="text-base font-bold text-white">{dataSiswa.namaAnak}</p>
+                    <p className="text-[11px] text-emerald-200 mt-1">
+                      Target Kelompok: <strong>{dataSiswa.kelasTarget}</strong> | NIK: {dataSiswa.nikAnak}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-emerald-300 font-semibold uppercase mb-1">STATUS PENDAFTARAN</p>
+                    <span className="bg-amber-400 text-amber-950 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
+                      ⏳ {dataSiswa.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -317,7 +402,7 @@ export default function PortalWali() {
           </div>
         )}
 
-        {/* Tab 3: Infaq & ZIS Kemitraan Lazismu */}
+        {/* Tab 3: Infaq & ZIS */}
         {activeTab === "infaq" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
@@ -330,7 +415,7 @@ export default function PortalWali() {
             <div className="bg-orange-50 border border-orange-200 p-3 rounded-xl text-xs text-orange-950 flex items-start gap-2">
               <span className="text-base">🤝</span>
               <p>
-                Seluruh dana Infaq, Sadaqah, & Zakat yang ditunaikan di aplikasi ini disalurkan <strong>langsung ke Rekening / QRIS Resmi LAZISMU (Lembaga Amil Zakat Muhammadiyah)</strong> secara aman, transparan, & tersertifikasi syariah.
+                Seluruh dana Infaq, Sadaqah, & Zakat yang ditunaikan di aplikasi ini disalurkan <strong>langsung ke Rekening / QRIS Resmi LAZISMU (Lembaga Amil Zakat Muhammadiyah)</strong>.
               </p>
             </div>
             
@@ -353,7 +438,6 @@ export default function PortalWali() {
                 </select>
               </div>
 
-              {/* Tampilan Khusus Zakat Maal */}
               {jenisInfaq === "Zakat Maal" && (
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Total Nilai Harta / Tabungan (Rp)</label>
@@ -364,9 +448,6 @@ export default function PortalWali() {
                     onChange={(e) => handleHartaChange(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                   />
-                  <p className="text-[10px] text-slate-500 mt-1">
-                    *Kalkulator otomatis menghitung 2.5% dari total harta yang diinputkan.
-                  </p>
                 </div>
               )}
 
@@ -452,7 +533,7 @@ export default function PortalWali() {
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 space-y-1">
                   <p className="font-bold">✓ Penyaluran {jenisInfaq} Berhasil Ditunaikan!</p>
                   <p className="text-[11px] text-emerald-800 italic">
-                    "Ajarakallahu fiimaa a'thaita, wa baaraka fiimaa abqaita, wa ja'alahu laka thahuuraa" (Semoga Allah memberikan pahala atas apa yang telah engkau berikan, memberkahi apa yang engkau sisakan, dan menjadikannya pembersih bagimu). Jazakumullah Khairan.
+                    Jazakumullah Khairan atas kedermawanan Bapak/Ibu.
                   </p>
                 </div>
               )}
@@ -491,18 +572,14 @@ export default function PortalWali() {
         {activeTab === "ppdb" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Formulir Pendaftaran Siswa Baru (PPDB Online)</h2>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                alert("Pendaftaran PPDB berhasil dikirim! Silakan lakukan pembayaran pendaftaran pada tab Bayar SPP & Biaya.");
-              }}
-              className="space-y-3"
-            >
+            <form onSubmit={handlePPDBSubmit} className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap Calon Siswa</label>
                 <input
                   type="text"
                   placeholder="Masukkan nama lengkap anak"
+                  value={namaAnak}
+                  onChange={(e) => setNamaAnak(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                   required
                 />
@@ -512,7 +589,9 @@ export default function PortalWali() {
                 <label className="block text-xs font-semibold text-slate-700 mb-1">NIK Anak (Sesuai Kartu Keluarga)</label>
                 <input
                   type="number"
-                  placeholder="16 digit NIK Anak di Kartu Keluarga"
+                  placeholder="16 digit NIK Anak"
+                  value={nikAnak}
+                  onChange={(e) => setNikAnak(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                   required
                 />
@@ -520,7 +599,12 @@ export default function PortalWali() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Pilihan Kelas Target</label>
-                <select className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs" required>
+                <select
+                  value={kelasTarget}
+                  onChange={(e) => setKelasTarget(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
+                  required
+                >
                   <option value="Kelas A">Kelas A (Usia 4 - 5 Tahun)</option>
                   <option value="Kelas B">Kelas B (Usia 5 - 6 Tahun)</option>
                 </select>
@@ -528,18 +612,22 @@ export default function PortalWali() {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tempat Lahir Anak</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tempat Lahir</label>
                   <input
                     type="text"
                     placeholder="Contoh: Sadirejo / Medan"
+                    value={tempatLahir}
+                    onChange={(e) => setTempatLahir(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tanggal Lahir Anak</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tanggal Lahir</label>
                   <input
                     type="date"
+                    value={tanggalLahir}
+                    onChange={(e) => setTanggalLahir(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                     required
                   />
@@ -547,10 +635,12 @@ export default function PortalWali() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Alamat Lengkap (Domisili Tempat Tinggal)</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Alamat Lengkap Domisili</label>
                 <textarea
                   rows={2}
-                  placeholder="Jalan, Desa/Kelurahan, Kecamatan, Dusun/RT/RW..."
+                  placeholder="Jalan, Desa/Kelurahan, RT/RW..."
+                  value={alamat}
+                  onChange={(e) => setAlamat(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                   required
                 ></textarea>
@@ -562,6 +652,8 @@ export default function PortalWali() {
                   <input
                     type="text"
                     placeholder="Nama lengkap ayah"
+                    value={namaAyah}
+                    onChange={(e) => setNamaAyah(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                     required
                   />
@@ -571,6 +663,8 @@ export default function PortalWali() {
                   <input
                     type="text"
                     placeholder="Pekerjaan ayah"
+                    value={pekerjaanAyah}
+                    onChange={(e) => setPekerjaanAyah(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                     required
                   />
@@ -583,6 +677,8 @@ export default function PortalWali() {
                   <input
                     type="text"
                     placeholder="Nama lengkap ibu"
+                    value={namaIbu}
+                    onChange={(e) => setNamaIbu(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                     required
                   />
@@ -592,21 +688,12 @@ export default function PortalWali() {
                   <input
                     type="text"
                     placeholder="Pekerjaan ibu"
+                    value={pekerjaanIbu}
+                    onChange={(e) => setPekerjaanIbu(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
                     required
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Nomor WhatsApp Wali / Kontak Aktif</label>
-                <input
-                  type="tel"
-                  defaultValue={noWaInput}
-                  placeholder="Contoh: 08123456789"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs"
-                  required
-                />
               </div>
 
               <button
