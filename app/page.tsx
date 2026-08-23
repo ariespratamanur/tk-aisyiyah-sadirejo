@@ -9,10 +9,10 @@ export default function Home() {
         {/* Header & Logo */}
         <div className="space-y-3">
           <img
-  src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Logo_Muhammadiyah.svg/512px-Logo_Muhammadiyah.svg.png"
-  alt="Logo Muhammadiyah"
-  className="w-16 h-16 mx-auto object-contain drop-shadow-sm"
-/>
+            src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Logo_Muhammadiyah.svg/512px-Logo_Muhammadiyah.svg.png"
+            alt="Logo Muhammadiyah"
+            className="w-16 h-16 mx-auto object-contain drop-shadow-sm"
+          />
           <div>
             <h1 className="text-lg font-bold text-emerald-950">
               TK 'AISYIYAH BUSTANUL ATHFAL SADIREJO
