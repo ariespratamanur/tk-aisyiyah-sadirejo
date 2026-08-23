@@ -21,7 +21,7 @@ export default function PortalWali() {
   const [raporUrl, setRaporUrl] = useState<string | null>(null);
   const [kuitansiList, setKuitansiList] = useState<any[]>([]);
 
-  // Form PPDB
+  // Form PPDB Lengkap
   const [namaAnak, setNamaAnak] = useState("");
   const [nikAnak, setNikAnak] = useState("");
   const [jenisKelamin, setJenisKelamin] = useState("Laki-laki");
@@ -148,12 +148,12 @@ export default function PortalWali() {
     }
   };
 
-  // Submit PPDB ke Supabase (Termasuk Jenis Kelamin)
+  // Submit PPDB ke Supabase (Termasuk Jenis Kelamin & Detail Lengkap)
   const handlePPDBSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const taAktif = localStorage.getItem("selected_ta") || "2026/2027";
 
-    const { data, error } = await supabase.from("siswa").insert([
+    const { error } = await supabase.from("siswa").insert([
       {
         tenant_id: TENANT_ID,
         nama_anak: namaAnak,
@@ -385,7 +385,7 @@ export default function PortalWali() {
           </div>
         )}
 
-        {/* Tab 8: Form PPDB Online dengan Tambahan Input Jenis Kelamin */}
+        {/* Tab 8: Form PPDB Online Lengkap dengan Dropdown Jenis Kelamin */}
         {activeTab === "ppdb" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Formulir Pendaftaran Siswa Baru (PPDB Online)</h2>
@@ -403,7 +403,7 @@ export default function PortalWali() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Jenis Kelamin *</label>
-                  <select value={jenisKelamin} onChange={(e) => setJenisKelamin(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs font-bold">
+                  <select value={jenisKelamin} onChange={(e) => setJenisKelamin(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs font-bold bg-white">
                     <option value="Laki-laki">👦 Laki-laki</option>
                     <option value="Perempuan">👧 Perempuan</option>
                   </select>
@@ -411,14 +411,42 @@ export default function PortalWali() {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Kelompok Target *</label>
-                  <select value={kelasTarget} onChange={(e) => setKelasTarget(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs font-bold">
+                  <select value={kelasTarget} onChange={(e) => setKelasTarget(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs font-bold bg-white">
                     <option value="Kelas A">Kelas A (4-5 Tahun)</option>
                     <option value="Kelas B">Kelas B (5-6 Tahun)</option>
                   </select>
                 </div>
               </div>
 
-              <button type="submit" className="w-full bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-xs">Kirim Formulir PPDB Online ke Cloud Database</button>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tempat Lahir *</label>
+                  <input type="text" placeholder="Kota Lahir" value={tempatLahir} onChange={(e) => setTempatLahir(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Tanggal Lahir *</label>
+                  <input type="date" value={tanggalLahir} onChange={(e) => setTanggalLahir(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Alamat Domisili Lengkap *</label>
+                <textarea placeholder="Tuliskan alamat lengkap rumah" value={alamat} onChange={(e) => setAlamat(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required></textarea>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <input type="text" placeholder="Nama Ayah" value={namaAyah} onChange={(e) => setNamaAyah(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
+                <input type="text" placeholder="Pekerjaan Ayah" value={pekerjaanAyah} onChange={(e) => setPekerjaanAyah(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <input type="text" placeholder="Nama Ibu" value={namaIbu} onChange={(e) => setNamaIbu(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
+                <input type="text" placeholder="Pekerjaan Ibu" value={pekerjaanIbu} onChange={(e) => setPekerjaanIbu(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
+              </div>
+
+              <button type="submit" className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 rounded-lg text-xs transition">
+                Kirim Formulir PPDB Online
+              </button>
             </form>
           </div>
         )}
