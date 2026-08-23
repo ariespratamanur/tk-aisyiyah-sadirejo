@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
-// Inisialisasi Supabase SDK langsung di dalam file agar aman dari masalah path
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://tncvbyhgsjtoswlyxcrl.supabase.co";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -23,7 +22,6 @@ export default function PortalWali() {
   const [dataSiswa, setDataSiswa] = useState<any>(null);
   const [jurnalSiswa, setJurnalSiswa] = useState<any[]>([]);
   const [tabunganSiswa, setTabunganSiswa] = useState<any[]>([]);
-  const [raporUrl, setRaporUrl] = useState<string | null>(null);
   const [kuitansiList, setKuitansiList] = useState<any[]>([]);
 
   // Form PPDB Lengkap
@@ -43,7 +41,6 @@ export default function PortalWali() {
   const [jenisBiaya, setJenisBiaya] = useState("SPP Bulanan");
   const [nominalBiaya, setNominalBiaya] = useState("150000");
   const [buktiFile, setBuktiFile] = useState<string | null>(null);
-  const [statusBayarSPP, setStatusBayarSPP] = useState<"idle" | "pending" | "verified">("idle");
 
   useEffect(() => {
     const savedNamaWali = localStorage.getItem("wali_nama");
@@ -55,7 +52,6 @@ export default function PortalWali() {
     }
   }, []);
 
-  // Sync Data dari Supabase Cloud
   const syncDataFromSupabase = async () => {
     if (!noWaInput) return;
 
@@ -153,7 +149,6 @@ export default function PortalWali() {
     }
   };
 
-  // Submit PPDB ke Supabase
   const handlePPDBSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const taAktif = localStorage.getItem("selected_ta") || "2026/2027";
@@ -201,7 +196,6 @@ export default function PortalWali() {
     ]);
 
     if (!error) {
-      setStatusBayarSPP("pending");
       alert("Bukti pembayaran berhasil terkirim ke Supabase Cloud & Portal TU!");
     } else {
       alert("Gagal mengirim bukti pembayaran: " + error.message);
