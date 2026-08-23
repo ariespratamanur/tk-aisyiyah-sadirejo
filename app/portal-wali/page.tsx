@@ -24,6 +24,7 @@ export default function PortalWali() {
   // Form PPDB
   const [namaAnak, setNamaAnak] = useState("");
   const [nikAnak, setNikAnak] = useState("");
+  const [jenisKelamin, setJenisKelamin] = useState("Laki-laki");
   const [kelasTarget, setKelasTarget] = useState("Kelas A");
   const [tempatLahir, setTempatLahir] = useState("");
   const [tanggalLahir, setTanggalLahir] = useState("");
@@ -36,15 +37,8 @@ export default function PortalWali() {
   // Bayar Biaya
   const [jenisBiaya, setJenisBiaya] = useState("SPP Bulanan");
   const [nominalBiaya, setNominalBiaya] = useState("150000");
-  const [metodeSPP, setMetodeSPP] = useState<"qris" | "transfer">("qris");
   const [buktiFile, setBuktiFile] = useState<string | null>(null);
   const [statusBayarSPP, setStatusBayarSPP] = useState<"idle" | "pending" | "verified">("idle");
-
-  // Infaq Sukarela Lazismu
-  const [jenisInfaq, setJenisInfaq] = useState("Infaq Sukarela");
-  const [nominalInfaq, setNominalInfaq] = useState("");
-  const [metodeInfaq, setMetodeInfaq] = useState<"qris" | "transfer">("qris");
-  const [sudahBayarInfaq, setSudahBayarInfaq] = useState(false);
 
   useEffect(() => {
     const savedNamaWali = localStorage.getItem("wali_nama");
@@ -73,6 +67,7 @@ export default function PortalWali() {
         id: siswaData.id,
         namaAnak: siswaData.nama_anak,
         nikAnak: siswaData.nik_anak,
+        jenisKelamin: siswaData.jenis_kelamin || "Laki-laki",
         kelasTarget: siswaData.kelas_target,
         status: siswaData.status,
         tahunAjaran: siswaData.tahun_ajaran,
@@ -153,7 +148,7 @@ export default function PortalWali() {
     }
   };
 
-  // Submit PPDB ke Supabase
+  // Submit PPDB ke Supabase (Termasuk Jenis Kelamin)
   const handlePPDBSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const taAktif = localStorage.getItem("selected_ta") || "2026/2027";
@@ -163,6 +158,7 @@ export default function PortalWali() {
         tenant_id: TENANT_ID,
         nama_anak: namaAnak,
         nik_anak: nikAnak,
+        jenis_kelamin: jenisKelamin,
         kelas_target: kelasTarget,
         tahun_ajaran: taAktif,
         nama_wali: namaWaliInput,
@@ -294,7 +290,7 @@ export default function PortalWali() {
                   <div className="flex justify-between items-center pt-1">
                     <div>
                       <p className="text-[10px] text-emerald-300 font-semibold uppercase">NAMA SISWA</p>
-                      <p className="text-base font-bold text-white">{dataSiswa.namaAnak}</p>
+                      <p className="text-base font-bold text-white">{dataSiswa.namaAnak} ({dataSiswa.jenisKelamin})</p>
                       <p className="text-[11px] text-emerald-200 mt-1">Target Kelompok: <strong>{dataSiswa.kelasTarget}</strong> | NIK: {dataSiswa.nikAnak}</p>
                     </div>
                     <div className="text-right">
@@ -389,17 +385,39 @@ export default function PortalWali() {
           </div>
         )}
 
-        {/* Tab 8: Form PPDB Online */}
+        {/* Tab 8: Form PPDB Online dengan Tambahan Input Jenis Kelamin */}
         {activeTab === "ppdb" && (
           <div className="bg-white p-5 rounded-2xl shadow-sm border space-y-4">
             <h2 className="text-sm font-bold text-slate-800 border-b pb-2">Formulir Pendaftaran Siswa Baru (PPDB Online)</h2>
             <form onSubmit={handlePPDBSubmit} className="space-y-3">
-              <input type="text" placeholder="Nama Lengkap Anak" value={namaAnak} onChange={(e) => setNamaAnak(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-              <input type="number" placeholder="16 Digit NIK Anak" value={nikAnak} onChange={(e) => setNikAnak(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
-              <select value={kelasTarget} onChange={(e) => setKelasTarget(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs">
-                <option value="Kelas A">Kelas A (4-5 Tahun)</option>
-                <option value="Kelas B">Kelas B (5-6 Tahun)</option>
-              </select>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap Anak *</label>
+                <input type="text" placeholder="Masukkan nama lengkap anak" value={namaAnak} onChange={(e) => setNamaAnak(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">16 Digit NIK Anak *</label>
+                <input type="number" placeholder="Masukkan 16 digit NIK anak" value={nikAnak} onChange={(e) => setNikAnak(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs" required />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Jenis Kelamin *</label>
+                  <select value={jenisKelamin} onChange={(e) => setJenisKelamin(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs font-bold">
+                    <option value="Laki-laki">👦 Laki-laki</option>
+                    <option value="Perempuan">👧 Perempuan</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Kelompok Target *</label>
+                  <select value={kelasTarget} onChange={(e) => setKelasTarget(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs font-bold">
+                    <option value="Kelas A">Kelas A (4-5 Tahun)</option>
+                    <option value="Kelas B">Kelas B (5-6 Tahun)</option>
+                  </select>
+                </div>
+              </div>
+
               <button type="submit" className="w-full bg-emerald-700 text-white font-semibold py-2.5 rounded-lg text-xs">Kirim Formulir PPDB Online ke Cloud Database</button>
             </form>
           </div>
