@@ -154,7 +154,7 @@ export default function PortalGuruPage() {
     setLoading(false);
   };
 
-  // 3. HANDLER UPLOAD RAPOR RDM
+  // 3. HANDLER UPLOAD e-Rapor PAUD
   const handleUploadRapor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudentId || !raporFile) {
@@ -278,7 +278,8 @@ export default function PortalGuruPage() {
                 activeTab === 'rapor' ? 'bg-emerald-700 text-white' : 'text-slate-600 hover:bg-slate-200'
               }`}
             >
-              📄 Rapor RDM
+              📄 e-Rapor PAUD
+              
             </button>
           </div>
         </div>
